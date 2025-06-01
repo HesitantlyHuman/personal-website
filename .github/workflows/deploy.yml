@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page-url }}
+      url: https://hesitantlyhuman.github.io/
     steps:
       - name: Deploy to Github Pages
         id: deployment
