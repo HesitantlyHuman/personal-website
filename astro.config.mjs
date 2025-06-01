@@ -9,12 +9,11 @@ import rehypeKatex from "rehype-katex"
 
 import { transformerMetaHighlight } from '@shikijs/transformers';
 
-const repo = "https://github.com/HesitantlyHuman/astro-sphere";
+const repo = "https://github.com/HesitantlyHuman/personal-website";
 
 // https://astro.build/config
 export default defineConfig({
   site: "https://hesitantlyhuman.github.io",
-  base: "/astro-sphere",
   integrations: [sitemap(), solidJs(), tailwind({ applyBaseStyles: false }), mdx()],
   markdown: {
     shikiConfig: {
