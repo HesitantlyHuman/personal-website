@@ -1,0 +1,179 @@
+---
+import { SITE, LINKS } from "@consts";
+import { cn } from "@lib/utils";
+
+import { getURL } from "@utils/url";
+
+import Container from "@components/Container.astro";
+import ThemeIcon from "@components/ThemeIcon.astro";
+
+const { pathname } = Astro.url;
+const pageURL = pathname.endsWith("/") ? pathname : pathname + "/";
+
+function isMatch(linkRef: string, pageURL: string): boolean {
+  if (!pageURL.startsWith(linkRef)) return false;
+
+  const nextChar = pageURL.charAt(linkRef.length);
+  return nextChar === "" || nextChar === "/";
+}
+---
+
+<header id="header" class="fixed top-0 w-full h-16 z-50">
+  <Container size="5xl">
+    <div class="relative h-full w-full">
+      <div
+        class="absolute left-0 top-1/2 -translate-y-1/2 flex gap-1 font-semibold"
+      >
+        <a
+          href={getURL("/")}
+          class="flex gap-1 text-current hover:text-black dark:hover:text-white"
+        >
+          <svg class="size-6 fill-current">
+            <use href={getURL("brand.svg#brand")}></use>
+          </svg>
+          <div>
+            {SITE.TITLE}
+          </div>
+        </a>
+      </div>
+
+      <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <nav class="hidden md:flex items-center justify-center text-sm gap-1">
+          {
+            LINKS.map((LINK) => (
+              <a
+                href={getURL(LINK.HREF)}
+                class={cn(
+                  "h-8 rounded-full px-3 text-current",
+                  "flex items-center justify-center",
+                  isMatch(getURL(LINK.HREF), pageURL)
+                    ? "bg-black dark:bg-white text-white dark:text-black"
+                    : "hover:bg-black/5 dark:hover:bg-white/20 hover:text-black dark:hover:text-white",
+                )}
+              >
+                {LINK.TEXT}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+
+      <div class="buttons absolute right-0 top-1/2 -translate-y-1/2 flex gap-1">
+        <a
+          href={getURL("/search")}
+          aria-label={`Search blog posts and projects on ${SITE.TITLE}`}
+          class={cn(
+            "hidden md:flex",
+            "size-9 rounded-full p-2 items-center justify-center",
+            "bg-transparent hover:bg-black/5 dark:hover:bg-white/20",
+            "stroke-current hover:stroke-black hover:dark:stroke-white",
+            "border border-black/10 dark:border-white/25",
+            isMatch(getURL("/search"), pageURL)
+              ? "pointer-events-none bg-black dark:bg-white text-white dark:text-black"
+              : "",
+          )}
+        >
+          <svg class="size-full">
+            <use href={getURL("ui.svg#search")}></use>
+          </svg>
+        </a>
+
+        <a
+          href={getURL("rss.xml")}
+          target="_blank"
+          aria-label={`Rss feed for ${SITE.TITLE}`}
+          class={cn(
+            "hidden md:flex",
+            "size-9 rounded-full p-2 items-center justify-center",
+            "bg-transparent hover:bg-black/5 dark:hover:bg-white/20",
+            "stroke-current hover:stroke-black hover:dark:stroke-white",
+            "border border-black/10 dark:border-white/25",
+          )}
+        >
+          <svg class="size-full">
+            <use href={getURL("ui.svg#rss")}></use>
+          </svg>
+        </a>
+
+        <ThemeIcon collapsible="t" />
+
+        <button
+          id="header-drawer-button"
+          aria-label={`Toggle drawer open and closed`}
+          class={cn(
+            "flex md:hidden",
+            "size-9 rounded-full p-2 items-center justify-center",
+            "bg-transparent hover:bg-black/5 dark:hover:bg-white/20",
+            "stroke-current hover:stroke-black hover:dark:stroke-white",
+            "border border-black/10 dark:border-white/25",
+          )}
+        >
+          <svg id="drawer-open" class="size-full">
+            <use href={getURL("ui.svg#menu")}></use>
+          </svg>
+          <svg id="drawer-close" class="size-full">
+            <use href={getURL("ui.svg#x")}></use>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </Container>
+</header>
+
+<style>
+  #header-drawer-button > #drawer-open {
+    @apply block;
+  }
+
+  #header-drawer-button > #drawer-close {
+    @apply hidden;
+  }
+
+  #header-drawer-button.open > #drawer-open {
+    @apply hidden;
+  }
+
+  #header-drawer-button.open > #drawer-close {
+    @apply block;
+  }
+</style>
+
+<script>
+  let scrollY = 0;
+  var drawer: HTMLElement;
+  var drawerButton: HTMLElement;
+
+  function toggleDrawer() {
+    const isOpen = drawer?.classList.toggle("open");
+    drawerButton?.classList.toggle("open");
+
+    if (isOpen) {
+      // Freeze scroll
+      scrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.scrollTop = scrollY;
+    } else {
+      document.body.style.overflow = "";
+      window.scrollTo({
+        top: scrollY,
+        left: 0,
+        behavior: "instant",
+      });
+    }
+  }
+
+  function initializeDrawerButton() {
+    drawer = document.getElementById("drawer") as HTMLElement;
+    if (!drawer) return;
+    drawerButton = document.getElementById(
+      "header-drawer-button",
+    ) as HTMLElement;
+    drawerButton?.addEventListener("click", toggleDrawer);
+
+    drawer.classList.remove("open");
+    drawerButton.classList.remove("open");
+  }
+
+  initializeDrawerButton();
+  document.addEventListener("astro:page-load", initializeDrawerButton);
+</script>

@@ -1,0 +1,67 @@
+---
+import { type CollectionEntry, getCollection } from "astro:content";
+
+import TableOfContents from "@components/TableOfContents.astro";
+import PreviousNextButtons from "@components/PreviousNextButtons.astro";
+import CodeSnippet from "@components/CodeSnippet.astro";
+
+type Props = {
+  entry: CollectionEntry<"blog"> | CollectionEntry<"projects">;
+};
+
+// Get the requested entry
+const { entry } = Astro.props;
+const { collection } = entry;
+const { Content, headings } = await entry.render();
+
+// Get the next and prev entries (modulo to wrap index)
+const items = (await getCollection(collection))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const index = items.findIndex((x) => x.slug === entry.slug);
+const prev = items[(index - 1 + items.length) % items.length];
+const next = items[(index + 1) % items.length];
+---
+
+<div class="animate flex mx-auto gap-12 items-start">
+  <article
+    id="main-article"
+    class:list={[
+      "max-w-full",
+      "w-full",
+      headings.length > 0 ? "lg:max-w-2xl" : "",
+    ]}
+  >
+    <Content
+      components={{
+        pre: CodeSnippet,
+      }}
+    />
+  </article>
+  {
+    headings.length > 0 && (
+      <TableOfContents headings={headings} nav_depth={entry.data.nav_depth} />
+    )
+  }
+</div>
+<div class="animate">
+  <PreviousNextButtons prev={prev} next={next} />
+</div>
+
+<style>
+  :global(article > :first-child > :first-child) {
+    margin-top: 0;
+  }
+
+  :global(article > :first-child) {
+    margin-top: 0;
+  }
+
+  :global(article > :last-child > :last-child) {
+    margin-bottom: 0;
+  }
+
+  :global(article > :last-child) {
+    margin-bottom: 0;
+  }
+</style>

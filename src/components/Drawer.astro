@@ -1,0 +1,86 @@
+---
+import { SITE, LINKS } from "@consts";
+import { cn } from "@lib/utils";
+
+import { getURL } from "@utils/url";
+
+import ThemeIcon from "@components/ThemeIcon.astro";
+
+const { pathname } = Astro.url;
+const pageURL = pathname.endsWith("/") ? pathname : pathname + "/";
+
+const prefixedLinks = LINKS.map((link) => {
+  return {
+    TEXT: link.TEXT,
+    HREF: import.meta.env.BASE_URL + link.HREF,
+  };
+});
+
+function isMatch(linkRef: string, pageURL: string): boolean {
+  if (!pageURL.startsWith(linkRef)) return false;
+
+  const nextChar = pageURL.charAt(linkRef.length);
+  return nextChar === "" || nextChar === "/";
+}
+---
+
+<div
+  id="drawer"
+  class="fixed inset-0 h-0 z-40 overflow-hidden flex flex-col items-center justify-center md:hidden bg-neutral-100 dark:bg-neutral-900 transition-[height] duration-300 ease-in-out"
+>
+  <nav class="flex flex-col items-center space-y-2">
+    {
+      prefixedLinks.map((LINK) => (
+        <a
+          href={getURL(LINK.HREF)}
+          class={cn(
+            "flex items-center justify-center px-3 py-1 rounded-full",
+            "text-current hover:text-black dark:hover:text-white",
+            "hover:bg-black/5 dark:hover:bg-white/20",
+            isMatch(LINK.HREF, pageURL)
+              ? "pointer-events-none bg-black dark:bg-white text-white dark:text-black"
+              : "",
+          )}
+        >
+          {LINK.TEXT}
+        </a>
+      ))
+    }
+  </nav>
+
+  <div class="flex gap-1 mt-5">
+    <a
+      href=`${import.meta.env.BASE_URL}/search`
+      aria-label={`Search blog posts and projects on ${SITE.TITLE}`}
+      class={cn(
+        "size-9 rounded-full p-2 items-center justify-center bg-transparent hover:bg-black/5 dark:hover:bg-white/20 stroke-current hover:stroke-black hover:dark:stroke-white border border-black/10 dark:border-white/25",
+        isMatch(`${import.meta.env.BASE_URL}/search`, pageURL)
+          ? "pointer-events-none bg-black dark:bg-white text-white dark:text-black"
+          : "",
+      )}
+    >
+      <svg class="size-full">
+        <use href={getURL("ui.svg#search")}></use>
+      </svg>
+    </a>
+
+    <a
+      href=`${import.meta.env.BASE_URL}/rss.xml`
+      target="_blank"
+      aria-label={`Rss feed for ${SITE.TITLE}`}
+      class="size-9 rounded-full p-2 items-center justify-center bg-transparent hover:bg-black/5 dark:hover:bg-white/20 stroke-current hover:stroke-black hover:dark:stroke-white border border-black/10 dark:border-white/25"
+    >
+      <svg class="size-full">
+        <use href={getURL("ui.svg#rss")}></use>
+      </svg>
+    </a>
+
+    <ThemeIcon />
+  </div>
+</div>
+
+<style>
+  #drawer.open {
+    @apply h-full;
+  }
+</style>
