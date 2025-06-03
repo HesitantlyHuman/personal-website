@@ -18,7 +18,7 @@ function isMatch(linkRef: string, pageURL: string): boolean {
 }
 ---
 
-<header id="header" class="fixed top-0 w-full h-16 z-50">
+<header id="header" class="fixed top-0 w-full h-16 z-50 scrolled">
   <Container size="5xl">
     <div class="relative h-full w-full">
       <div
@@ -26,14 +26,14 @@ function isMatch(linkRef: string, pageURL: string): boolean {
       >
         <a
           href={getURL("/")}
-          class="flex flex-row items-center gap-1 text-current hover:text-black dark:hover:text-white"
+          class="flex flex-row items-center gap-2 text-current hover:text-black dark:hover:text-white"
         >
-          <svg class="size-12 fill-current">
+          <svg class="size-9">
             <use href={getURL("brand.svg#color")}></use>
           </svg>
-          <div>
+          <span>
             {SITE.TITLE}
-          </div>
+          </span>
         </a>
       </div>
 
