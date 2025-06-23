@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content"
+import { Picture } from "astro:assets"
 import { getURL } from "@utils/url"
 import PageLayout from "@layouts/PageLayout.astro"
 import ArrowCard from "@components/ArrowCard"
@@ -7,8 +8,8 @@ import StackCard from "@components/StackCard.astro"
 import { SITE, SOCIALS } from "@consts"
 import TwinklingStars from "@components/TwinklingStars.astro"
 import MeteorShower from "@components/MeteorShower.astro"
-import Image from "astro/components/Image.astro"
-import HeroPhoto from "@images/IMG_0496.jpg";
+import HeroPhoto from "@images/hero.png";
+import Container from "@components/Container.astro"
 
 const posts = (await getCollection("blog"))
   .filter(post => !post.data.draft)
@@ -71,32 +72,36 @@ const stack = [
   <script is:inline src={getURL("/js/bg.js")}></script>
   
   <!-- HERO -->
-  <section class="relative h-screen w-full">
-    <div id="planetcont" class='animate absolute inset-0 top-1/4 overflow-hidden'>
-      <div id="crescent" class='absolute top-0 left-1/2 -translate-x-1/2 w-[250vw] min-h-[100vh] aspect-square rounded-full p-[1px] bg-gradient-to-b from-black/25 dark:from-white/75 from-0% to-transparent to-5%'>
-        <div id="planet" class='w-full h-full bg-white dark:bg-black rounded-full p-[1px] overflow-hidden flex justify-center'>
-          <div id="blur" class='w-full h-20 rounded-full bg-neutral-900/25 dark:bg-white/25 blur-3xl'/>
+  <section class="animate relative h-screen w-full">
+    <Container size="5xl">
+      <div class="h-full flex md:flex-col lg:flex-row items-center justify-center">
+        <div class='w-full h-full flex justify-center'>
+          <div class='text-center mt-80 p-5'>
+            <p class='animated text-lg md:text-xl lg:text-2xl font-semibold opacity-75'>
+              Hello, I am
+            </p>
+            <p class='animated text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-black dark:text-white'>
+              Tanner Sims
+            </p>
+            <div id="ctaButtons" class='animated flex flex-wrap gap-4 justify-center mt-5'>
+              <a href={getURL("/blog")} class='py-2 px-4 rounded truncate text-xs md:text-sm lg:text-base bg-black dark:bg-white text-white dark:text-black hover:bg-black/70 hover:dark:bg-white/70'>
+                Read my blog
+              </a>
+              <a href={getURL("/work")} class='py-2 px-4 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/15 hover:dark:bg-white/15'>
+                View my work
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="pt-4 hidden lg:block">
+          <Picture src={HeroPhoto} formats={['avif', 'webp']} alt="Photo of Tanner Sims" fit="cover" width="1200"/>
         </div>
       </div>
-    </div>
-    <div class="animate absolute h-full w-full flex items-center justify-center">
-      <!-- <Image src={HeroPhoto} alt="Photo of Tanner Sims" fit="cover" width="800" height="1000"/> -->
-      <div class='relative w-full h-full flex items-center justify-center'>
-        <div class='p-5 text-center'>
-          <p class='animated text-lg md:text-xl lg:text-2xl font-semibold opacity-75'>
-            Hello, I am ...
-          </p>
-          <p class='animated text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-black dark:text-white'>
-            Tanner Sims
-          </p>
-          <div id="ctaButtons" class='animated flex flex-wrap gap-4 justify-center mt-5'>
-            <a href={getURL("/blog")} class='py-2 px-4 rounded truncate text-xs md:text-sm lg:text-base bg-black/85 dark:bg-white/90 text-white dark:text-black hover:bg-black hover:dark:bg-white'>
-              Read my blog
-            </a>
-            <a href={getURL("/work")} class='py-2 px-4 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/5 hover:dark:bg-white/15'>
-              View my work
-            </a>
-          </div>
+    </Container>
+    <div id="planetcont" class='absolute inset-0 top-[80vh] overflow-hidden'>
+      <div id="crescent" class='absolute top-0 left-1/2 -translate-x-1/2 w-[500vw] min-h-[100vh] aspect-square rounded-full p-[1px] bg-gradient-to-b from-black/25 dark:from-white/75 from-0% to-transparent to-5%'>
+        <div id="planet" class='w-full h-full bg-white dark:bg-black rounded-full p-[1px] overflow-hidden flex justify-center'>
+          <div id="blur" class='w-full h-20 rounded-full bg-neutral-900/25 dark:bg-white/25 blur-3xl'/>
         </div>
       </div>
     </div>
