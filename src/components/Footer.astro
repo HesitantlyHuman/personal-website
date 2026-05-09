@@ -82,15 +82,14 @@ const sourceURL = `${repo}/blob/main/${filePath}`;
       <Container size="5xl">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="flex h-full flex-col items-center sm:items-start">
-            <a
-              href=`${import.meta.env.BASE_URL}/`
-              class="flex flex-row items-center gap-2 w-fit h-full font-semibold text-current hover:text-black dark:hover:text-white pt-1"
+            <p
+              class="flex flex-row items-center gap-2 w-fit h-full font-semibold text-current pt-1"
             >
               <svg class="size-7">
                 <use href={getURL("brand.svg#color")}></use>
               </svg>
               {SITE.TITLE}
-            </a>
+            </p>
           </div>
           <div class="order-1 sm:order-2 flex justify-center sm:justify-end">
             <div class="flex flex-wrap gap-1 items-center justify-center">
