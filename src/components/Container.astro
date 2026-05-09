@@ -1,24 +1,87 @@
 ---
 import { cn } from "@lib/utils";
 
+type ContainerSize =
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl"
+  | "2xl"
+  | "3xl"
+  | "4xl"
+  | "5xl"
+  | "6xl"
+  | "7xl";
+
 type Props = {
-  size: "sm" | "md" | "lg" | "xl" | "2xl" | "5xl" | "6xl" | "7xl";
+  size?: ContainerSize;
+  mdSize?: ContainerSize;
+  lgSize?: ContainerSize;
+  xlSize?: ContainerSize;
 };
 
-const { size } = Astro.props;
+const { size = "5xl", mdSize, lgSize, xlSize } = Astro.props;
+
+const baseSizeClasses: Record<ContainerSize, string> = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
+const mdSizeClasses: Record<ContainerSize, string> = {
+  sm: "md:max-w-sm",
+  md: "md:max-w-md",
+  lg: "md:max-w-lg",
+  xl: "md:max-w-xl",
+  "2xl": "md:max-w-2xl",
+  "3xl": "md:max-w-3xl",
+  "4xl": "md:max-w-4xl",
+  "5xl": "md:max-w-5xl",
+  "6xl": "md:max-w-6xl",
+  "7xl": "md:max-w-7xl",
+};
+
+const lgSizeClasses: Record<ContainerSize, string> = {
+  sm: "lg:max-w-sm",
+  md: "lg:max-w-md",
+  lg: "lg:max-w-lg",
+  xl: "lg:max-w-xl",
+  "2xl": "lg:max-w-2xl",
+  "3xl": "lg:max-w-3xl",
+  "4xl": "lg:max-w-4xl",
+  "5xl": "lg:max-w-5xl",
+  "6xl": "lg:max-w-6xl",
+  "7xl": "lg:max-w-7xl",
+};
+
+const xlSizeClasses: Record<ContainerSize, string> = {
+  sm: "xl:max-w-sm",
+  md: "xl:max-w-md",
+  lg: "xl:max-w-lg",
+  xl: "xl:max-w-xl",
+  "2xl": "xl:max-w-2xl",
+  "3xl": "xl:max-w-3xl",
+  "4xl": "xl:max-w-4xl",
+  "5xl": "xl:max-w-5xl",
+  "6xl": "xl:max-w-6xl",
+  "7xl": "xl:max-w-7xl",
+};
 ---
 
 <div
   class={cn(
     "w-full h-full mx-auto px-5",
-    size === "sm" && "max-w-sm",
-    size === "md" && "max-w-md",
-    size === "lg" && "max-w-lg",
-    size === "xl" && "max-w-xl",
-    size === "2xl" && "max-w-2xl",
-    size === "5xl" && "max-w-5xl",
-    size === "6xl" && "max-w-6xl",
-    size === "7xl" && "max-w-7xl",
+    baseSizeClasses[size],
+    mdSize && mdSizeClasses[mdSize],
+    lgSize && lgSizeClasses[lgSize],
+    xlSize && xlSizeClasses[xlSize],
   )}
 >
   <slot />

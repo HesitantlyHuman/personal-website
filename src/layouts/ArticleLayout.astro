@@ -7,11 +7,11 @@ import BottomLayout from "@layouts/BottomLayout.astro";
 const { entry } = Astro.props;
 ---
 
-<TopLayout>
+<TopLayout narrow="md">
   <div class="animate">
     <ArticleTopLayout entry={entry} />
   </div>
 </TopLayout>
-<BottomLayout>
+<BottomLayout narrow="md">
   <ArticleBottomLayout entry={entry} />
 </BottomLayout>

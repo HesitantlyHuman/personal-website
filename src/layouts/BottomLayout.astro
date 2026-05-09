@@ -1,9 +1,24 @@
 ---
 import Container from "@components/Container.astro";
+
+type NarrowMode = "always" | "md" | "never";
+
+type Props = {
+  narrow?: NarrowMode;
+};
+
+const { narrow = "never" } = Astro.props;
+
+const containerProps =
+  narrow === "always"
+    ? { size: "3xl" as const }
+    : narrow === "never"
+      ? { size: "5xl" as const }
+      : { size: "3xl" as const, lgSize: "5xl" as const };
 ---
 
 <div class="flex-1 py-5">
-  <Container size="5xl">
+  <Container {...containerProps}>
     <slot />
   </Container>
 </div>

@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { getURL } from "@utils/url";
 import PageLayout from "@layouts/PageLayout.astro";
 import TopLayout from "@layouts/TopLayout.astro";
 import BottomLayout from "@layouts/BottomLayout.astro";
@@ -33,13 +34,23 @@ function formatWorkDate(input: Date | string) {
 
 <PageLayout title={WORK.TITLE} description={WORK.DESCRIPTION}>
   <TopLayout>
-    <div class="animate">
+    <div
+      class="animate flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
       <h1 class="text-3xl font-semibold text-black dark:text-white mt-2">
         {WORK.TITLE}
       </h1>
+
+      <a
+        href={getURL("/tanner_sims_resume.pdf")}
+        download
+        class="inline-flex w-fit items-center py-2 px-4 rounded truncate text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/15 hover:dark:bg-white/15"
+      >
+        Download resume
+      </a>
     </div>
   </TopLayout>
-  <BottomLayout>
+  <BottomLayout narrow="always">
     <ul>
       {
         work.map((entry) => (
@@ -48,7 +59,7 @@ function formatWorkDate(input: Date | string) {
               {formatWorkDate(entry.data.dateStart)} -{" "}
               {formatWorkDate(entry.data.dateEnd)}
             </div>
-            <div class="text-black dark:text-white font-semibold">
+            <div class="text-xl text-black dark:text-white font-semibold">
               {entry.data.company}
             </div>
             <div class="text-sm font-semibold">{entry.data.role}</div>
