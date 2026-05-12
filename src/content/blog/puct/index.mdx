@@ -1,0 +1,51 @@
+---
+title: "Upgrading MCTS: Getting smarter with PUCT"
+summary: "Designing a new algorithm to replace my naive MCTS solver for ladder-shedding card games."
+date: "May 11 2026"
+draft: true
+tags:
+- Monte Carlo Search Trees
+- PUCT
+- Machine Learning
+- Game Trees
+- Imperfect Information
+nav_depth: 2
+---
+
+{/* TODO: Add the link to the project post */}
+*(This blog post has an accompanying project post, which you can find here)*
+
+## Background
+
+A couple of years ago, I was playing [The Great Dalmuti](https://boardgamegeek.com/boardgame/929/the-great-dalmuti), when a hauntingly familiar thought began to creep into my head: *You could solve this.* *It's not that complicated.* *Just write a python program.*
+
+I wanted to know what a really strong player looked like. I was doing very well, but was I playing optimally? Are these games deep and intricate, like chess, or do they eventually end up just being games of chance?
+
+Somehow, I managed to convince myself that the state space of the game wasn't really _**that**_ big, and that the branching factor wasn't really _**too**_ bad. In my hubris, I missed what is the single biggest problem for anyone who wants to model these games:
+
+Ladder shedding games--like The Great Dalmuti, or Scum--are imperfect information games. As a player in the game, you do not have the luxury of knowing the true state of the game.
+
+Not only is the branching factor for these games much larger than I gave it credit for, but if you truly wanted to "solve" the game tree, you would need to take each of the actions you are already considering, and now consider them for every possible full state of the game, given the information you currently have (The full state of the game is also sometimes called the *"world"*, so I will be calling it that from now on).
+
+Now that is a tall task! Figuring out how to deal with this "problem" of possible worlds became the crux of getting a working algorithm.
+
+### A long story short
+
+To get around these issues, I implemented a [Monte Carlo Tree Search](https://en.wikipedia.org/wiki/Monte_Carlo_tree_search) (MCTS). While this post isn't about explaining the basics of MCTS, there are a couple of features of this approach that are relevant to our problem:
+
+1. The branching factor is irrelevant. Because MCTS uses *rollouts*, we can search deeply without exponentially increasing runtime.
+2. MCTS does not require 
+{/* TODO: Continue this list of why we like MCTS */}
+
+### The state of it all
+
+The resulting algorithm does work, and it even plays reasonable moves! (*hip-hip-horray!*) Here you can see me play against some AIs running the algorithm. Notice that it is giving me a suggested move as well.
+
+![Image of me playing against the previous AI, using the TUI](./previous_ai_ui.png)
+
+But that wasn't what we came here for. We wanted to know: How do you play this game the best? How good would a very strong player be? Could I beat a "perfect" Dalmuti player?
+
+Sadly, I couldn't answer these questions with my lukewarm naive MCTS algorithm. So, the project languished, forgotten. I was busy with work, with school. Dreams, abandoned.
+
+## The New Algorithm
+We needed a new approach. A new algorithm with which to forge ahead, into a new dawn of ladder-shedding card game AI performance.
