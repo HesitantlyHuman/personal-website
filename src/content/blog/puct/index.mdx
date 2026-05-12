@@ -49,3 +49,17 @@ Sadly, I couldn't answer these questions with my lukewarm naive MCTS algorithm. 
 
 ## The New Algorithm
 We needed a new approach. A new algorithm with which to forge ahead, into a new dawn of ladder-shedding card game AI performance.
+
+{/*
+TODO:
+- Talk about temperature, and temperature scheduling
+- Cover PUCT and how puct works
+- Improve the introduction on MCTS
+- Create graphs of the training progress (how do we show the improvement if the training examples themselves are also improving? Maybe the test set is a bunch of specific scenarios, and we can plot the loss retroactively against a strong later estimate of those values?)
+- Talk about why I chose to change to generating probabilities over values, and why that is an easier task to design around.
+- Talk about parameter selection
+*/}
+
+## Future Improvements
+- Current sampling of possible worlds and assignment of the likelihood of each possible world is still naive. We are considering lots of worlds that are not really that likely to be true, which means that we are not allowing ourselves to learn about the state of our opponents hands based on the things that they play. This means that our AI will diverge from optimal as the trick goes on, because at first, before anyone has played, the uniform distribution over the possible worlds is correct, but then becomes less correct as we get deeper. (I wonder if this would actually mean that keeping the same possible worlds from the top would actually be better? But then that would make our "simulation" of the opponents stronger than they should be, because they will inherently not consider worlds with incorrect information about the perspective player when the worlds were generated. Wait, dont we already have that problem with PUCT? But I guess the priors help us out a little bit. However, yes, it seems like the more rollouts we run, the more unnecessarily strong the opponents will get, because of this fact. So on one hand, doing PUCT leafs earliear will give us better world probabilities, but on the other hand, it will also leak more information to the opponents in our analysis.)
+- Setting it up so that it can train at the same time as it generates training examples.
