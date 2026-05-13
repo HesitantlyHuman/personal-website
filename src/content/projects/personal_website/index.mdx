@@ -66,12 +66,37 @@ export default defineConfig({
 ````
 
 ### Blog and Project Search
-The final change that I needed to make was improving the Astro Sphere blog and project main pages.
+The final change that I needed to make was improving the Astro Sphere blog and project main pages. The existing implementation was almost there, but missing some key usability features.
 
-{/* 
-TODO: Open up a branch that doesn not have this improvement to get an image of how it looked before, so that I can hype myself up.
-*/}
+![Image of the old Astro Sphere blog search page.](./old_blog_page_example.png)
+
+There was no way to search just blogs by text, or just posts by text. To do any text search, you had to go to the search page and search the entire site. Additionally, there was no way to reverse the order of the posts, or clear all tags once you had selected multiple.
+
+![Image of the new Astro Sphere blog search page.](./new_blog_page_example.png)
+
+Some styling improvements were made as well. To support longer tags and descriptions, the page width maximums were increased, the search bar magnifying glass icon was reduced in opacity to match the placeholder text, and a custom svg was created for the ascending to descending ordering switch--optimized for size and transfer speed, of course.
+
+Here you can see some of those usability and style improvements applied to the search page as well. First the old search page:
+
+![Image of the old Astro Sphere search page.](./old_search_page_example.png)
+
+And now the new search page, after those changes:
+
+![Image of the new Astro Sphere search page.](./new_search_page_example.png)
 
 ## Customizations
+Finally, there are some customizations to this site that are specific to my personal website. There are a couple, but I'll just highlight one of them here.
 
-- Hero and main page
+I have updated the hero section of my website to include my photo, and a short intro blurb. The change isn't drastic, but did require some restyling of the Astro Sphere main page, and special considerations for responsive design.
+
+Here is the original Astro Sphere hero:
+
+![Image of the old Astro Sphere hero.](./old_hero_page_example.png)
+
+And here is the hero of my site, which I am sure you have seen already, but will be included in the name of completeness anyways:
+
+![Image of the new Astro Sphere hero.](./new_hero_page_example.png)
+
+---
+
+While I am not a web designer by trade (remember, mathematician here!) I do appreciate a well-designed and perfomant website, and I hope you do as well! Feel free to look around, use the template, or make a PR.
