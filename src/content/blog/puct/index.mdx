@@ -60,6 +60,12 @@ TODO:
 - Talk about parameter selection
 */}
 
+{/* 
+TODO:
+- Explain why using an action model is better than using a value model (Because the action model is an easier task. The value model also has a bunch more random effects added in to the signal by all the things that could happen until the end of the round)
+- Talk about the litmus test for evaluating whether you have good data and targets to train a model on: "Could I do this? Could I learn this task?"
+*/}
+
 ## Future Improvements
 - Current sampling of possible worlds and assignment of the likelihood of each possible world is still naive. We are considering lots of worlds that are not really that likely to be true, which means that we are not allowing ourselves to learn about the state of our opponents hands based on the things that they play. This means that our AI will diverge from optimal as the trick goes on, because at first, before anyone has played, the uniform distribution over the possible worlds is correct, but then becomes less correct as we get deeper. (I wonder if this would actually mean that keeping the same possible worlds from the top would actually be better? But then that would make our "simulation" of the opponents stronger than they should be, because they will inherently not consider worlds with incorrect information about the perspective player when the worlds were generated. Wait, dont we already have that problem with PUCT? But I guess the priors help us out a little bit. However, yes, it seems like the more rollouts we run, the more unnecessarily strong the opponents will get, because of this fact. So on one hand, doing PUCT leafs earliear will give us better world probabilities, but on the other hand, it will also leak more information to the opponents in our analysis.)
 - Setting it up so that it can train at the same time as it generates training examples.
