@@ -13,9 +13,16 @@ repoUrl: https://github.com/HesitantlyHuman/autoclip
 ---
 
 ## Overview
+{/* TODO: Explain who this project is for, provide some simple motivation */}
 AutoClip is a python library which provides gradient clipping regularizers for PyTorch and TensorFlow. It improves stability during learning, training speed, and final test-set performance.
 
 It is based on a 2020 paper from [Seetharaman et al](https://arxiv.org/abs/2007.14469), and includes their original algorithm, along with a couple of alternatives and improvements.
+
+## What is AutoClip?
+
+### Why clip gradients?
+
+### How AutoClip works
 
 ## Motivation
 When I first read the [AutoClip paper](https://arxiv.org/abs/2007.14469), I was working on some BERT-based models I was training with PyTorch. I was trying to push training time as low as possible, and the models were showing some instability under the learning-rate schedules I was using.
@@ -23,6 +30,7 @@ When I first read the [AutoClip paper](https://arxiv.org/abs/2007.14469), I was 
 Naturally, I wanted to try this solution, but the original implementation from the paper was for TensorFlow. Worse yet, it didn't implement checkpointing and some other features I absolutely _**needed**_.
 
 To solve my problem, I implemented and published my own library which took the paper and expanded on it on PyPI. The results for my particular application were astounding: I was able to speed up the training time by roughly 30%, while improving final test-set metrics.
+{/* TODO: Where should I put this result? Add more of an obvious caveat to this result */}
 
 ## Design Choices
 I designed `autoclip` as an easy, drop-in addon to any training loop. Often, machine learning engineers do not have the luxury of owning the training loop, or the training loop is already complicated, and it isn't worth risking any changes to it.
@@ -47,6 +55,8 @@ optimizer = QuantileClip.as_optimizer(
 )
 ...
 ```
+
+{/* TODO: Explain why checkpointing matters */}
 
 I also added support for local and global clipping modes, configurable history length, percentile-based thresholds, and PyTorch-style checkpointing through `state_dict()` and `load_state_dict()`.
 
