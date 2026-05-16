@@ -64,4 +64,25 @@ const next = items[(index + 1) % items.length];
   :global(article > :last-child) {
     margin-bottom: 0;
   }
+
+  :global(#main-article summary) {
+    cursor: pointer;
+    opacity: 0.75;
+    transition:
+      opacity 150ms ease,
+      filter 150ms ease;
+  }
+
+  :global(#main-article summary:hover) {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+
+  :global(#main-article summary::marker) {
+    opacity: 0.7;
+  }
+
+  :global(#main-article summary:hover::marker) {
+    opacity: 1;
+  }
 </style>
