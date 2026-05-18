@@ -31,8 +31,8 @@ While I am going to leave these suggestions here for the entertainment of the re
 
 ## Ideas
 - Card Dealing: For each integer value of the fixed matrix mass, assign that mass to a random unfilled bin.
-- Noise Scaling: Generate a matrix of noise values, then scale rows and columns of that matrix to match the target margins. Afterwards, clamp to nearest integers and normalize to maintain margin invariants.
 - Index Sampling: Create a function mapping between N and all of the possible worlds. Then sample from the space 0..num_worlds and simply apply the function to the sample.
+- Noise Scaling: Generate a matrix of noise values, then scale rows and columns of that matrix to match the target margins. Afterwards, clamp to nearest integers and normalize to maintain margin invariants.
 - Mass Mixing: Generate a valid world, and then perform "mass swaps" to traverse over the graph of possible worlds.
 
 ### Card Dealing
@@ -110,11 +110,6 @@ If we can find a way to generate less random numbers for each world we sample, w
 
 The output of this algorithm is not uniformly distributed over the possible worlds.
 
-<details>
-<summary>Click me for an explanation.</summary>
-Consider the following counterexample
-</details>
-
 {/*
 Notes: Is this distribution equivalent to the uniform distribution over the possible worlds?
 
@@ -180,6 +175,22 @@ EXPLAIN WHY THIS IS THE CASE
 Using this, I quickly wrote up some python code and found that for small matrices (3x3, 4x4) it was actually fairly simple to enumerate all of the possiblities.
 SHOW SOME EXAMPLES, SOLUTIONS, and COUNTS
 However, then I tried input margins that were more... realistic. I tried sampling for a test scenario of SCUM (full deck of cards), and even counting all of the options quickly became impossible.
+
+```
+# Up to 15 players, with 18 ordinality slots
+player_constraints = [5, 4, 7, 6, 5, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0]
+card_counts = [2, 4, 2, 2, 4, 2, 4, 1, 1, 3, 4, 2, 3, 0, 0, 0, 0, 0]
+
+# Somone played 2 12s
+# Then someone else played 2 10s
+# Then someone played 2 7s
+# Then someone played 2 4s
+# Then someone played 1 11s
+# Then someone played 1 8s
+# Then someone played 1 7s
+# Then someone played 2 2s
+```
+
 SHOW THE SCREENSHOT, TELL HOW BIG THE SPACE IS
 The other problem is that despite having this nice algorithm, I still didn't have any way to do my index sampling. If different choices for each stars and bars subproblem (make sure this is explained) lead to different numbers of final possible states, then this approach doesn't actually help me create a generating function.
 */}
@@ -208,4 +219,119 @@ But what direction is it biased? The algorithm will be biased towards the low-co
 We assume that as players play the game, they will naturally tend to eliminate entire classes of cards from their hands, so as the trick progresses, the game will bias towards those types of solutions as well.
 
 However, at the start of the trick, this isn't a good representation of the possible worlds.
+*/}
+
+### Noise Scaling
+{/* TODO: explain the idea */}
+
+{/* 
+The first thing I did was pull things into python and just repeatedly scale the matrix and round.
+
+def scale_noise_naive(
+    row_constraints: list[int], col_constraints: list[int]
+) -> np.ndarray:
+    state = np.random.random((len(row_constraints), len(col_constraints)))
+    row_constraints, col_constraints = np.array(row_constraints), np.array(
+        col_constraints
+    )
+    if not np.sum(row_constraints) == np.sum(col_constraints):
+        raise ValueError("Constraints do not equal same mass!")
+
+    MAX_ITERATIONS = 1000
+    for _ in range(MAX_ITERATIONS):
+        row_sums = np.sum(state, axis=1)
+        if np.any((row_sums == 0) & (row_constraints != 0)):
+            raise RuntimeError("Unbound scaling detected!")
+        row_factors = row_constraints / row_sums
+        state = state * row_factors.reshape(-1, 1)
+
+        col_sums = np.sum(state, axis=0)
+        if np.any((col_sums == 0) & (col_constraints != 0)):
+            raise RuntimeError("Unbound scaling detected!")
+        col_factors = col_constraints / col_sums
+        state = state * col_factors
+
+        state = np.round(state)
+
+        row_sums, col_sums = np.sum(state, axis=1), np.sum(state, axis=0)
+        if np.all(row_sums == row_constraints) and np.all(col_sums == col_constraints):
+            return state
+
+    raise RuntimeError(f"Failed to converge after {MAX_ITERATIONS}!")
+
+Even if I let it run for a thousand iterations, this would sometimes fail to converge. Either it could oscillate between 2 unsolved states, or it would set some row or column to 0. To quickly evaluate how good/bad this approach was, I ran a quick test with the following setups:
+
+--- SIMPLE ---
+row_constraints = [3, 4, 7]
+col_constraints = [4, 5, 5]
+
+--- BIGGER ---
+row_constraints = [3, 4, 7, 2, 4]
+col_constraints = [4, 5, 6, 3, 2]
+
+--- LARGEST ---
+row_constraints = [3, 4, 7, 2, 5]
+col_constraints = [4, 3, 4, 3, 2, 3, 2]
+
+And--drumroll please... here are the results. This method was much worse than I thought. (1000 trials for each)
+
+SHOW THE RESULTS
+
+But, how many iterations do we really need for a sucessful run? Maybe we can just generate more matrices and try again?
+
+To test this out I averaged over 1000 trials of each of our previous examples, the number of iterations for a successful result.
+
+SHOW THE RESULTS
+
+It looks like even with the larger examples, the maxmimum number of iterations that it takes to get a successful results is 3.
+
+I tested doing the rounding step only occasionally:
+```
+if iteration_count % 5 == 0:
+    state = np.round(state)
+```
+
+SHOW RESULTS
+
+Looks like that change does help but not enough. The larger test still has a failure ratio of almost 0.8. (Talk about how bad that would be with the rerolling approach)
+*/}
+
+### Submatrix Sampling
+{/* 
+While working on this, I had a thought...
+# The full fixed-margin matrix is uniquely determined by the (N-1)x(M-1) submatrix.
+# Maybe there is a way to sample a random integer matrix such that the entries are less than certain values. Is that easier than the full problem.
+
+# Doesn't always generate a valid matrix
+# For example:
+# | ? | ? || 1
+# | 1 | ? || 4
+# |---|---||---
+#   3   2
+#
+# We can see that the sub-matrix [[1]] cannot generate a valid solution. That implies that the bottom right entry is 3, which exceeds what is allowed for that column
+#
+# A valid solution:
+# | 1 | 0 || 1
+# | 2 | 2 || 4
+# |---|---||---
+#   3   2
+
+I implemented the approach, so that I could see how often we ended up with invalid solutions. (In this case that means negative entries)
+
+SHOW RESULTS
+
+Unfortunately, the failure rate was quite high, and often depends one the exact nature of the margins, which is even more suboptimal.
+*/}
+
+### Honorable Mention: DP Based True Uniform Sampling
+{/* TODO: explain */}
+
+{/* While this method is reasonably fast for small examples, it has the same flaws as the index method. You end up needing to count all of final states
+
+Running
+player_constraints = [5, 4, 7, 6, 5, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0]
+card_counts = [2, 4, 2, 2, 4, 2, 4, 1, 1, 3, 4, 2, 3, 0, 0, 0, 0, 0]
+
+Instantly crashed my laptop, because the cache filled all of my RAM in milliseconds.
 */}

@@ -8,6 +8,7 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 
 import { transformerMetaHighlight } from '@shikijs/transformers';
+import remarkGithubAlerts from "remark-github-alerts"
 
 const repo = "https://github.com/HesitantlyHuman/personal-website";
 
@@ -31,7 +32,7 @@ export default defineConfig({
         dark: "dark-plus",
       }
     },
-    remarkPlugins: [remarkMath, sectionize],
+    remarkPlugins: [remarkMath, sectionize, remarkGithubAlerts],
     rehypePlugins: [rehypeKatex]
   },
   vite: {

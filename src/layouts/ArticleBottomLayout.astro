@@ -5,6 +5,10 @@ import TableOfContents from "@components/TableOfContents.astro";
 import PreviousNextButtons from "@components/PreviousNextButtons.astro";
 import CodeSnippet from "@components/CodeSnippet.astro";
 
+import "remark-github-alerts/styles/github-colors-light.css";
+import "remark-github-alerts/styles/github-colors-dark-class.css";
+import "remark-github-alerts/styles/github-base.css";
+
 type Props = {
   entry: CollectionEntry<"blog"> | CollectionEntry<"projects">;
 };
@@ -65,24 +69,110 @@ const next = items[(index + 1) % items.length];
     margin-bottom: 0;
   }
 
+  :global(#main-article details) {
+    margin-block: 1rem;
+    padding-block: 1rem;
+    padding-inline: 2rem;
+    border-width: 1px;
+    border-radius: 0.5rem;
+    border-color: rgb(0 0 0 / 15%);
+    overflow: hidden;
+  }
+
+  :global(#main-article details[open]) {
+    padding-bottom: 0;
+  }
+
+  :global(.dark #main-article details) {
+    border-color: rgb(255 255 255 / 20%);
+  }
+
   :global(#main-article summary) {
     cursor: pointer;
-    opacity: 0.75;
-    transition:
-      opacity 150ms ease,
-      filter 150ms ease;
+    color: rgb(0 0 0 / 65%);
+    background-color: rgb(0 0 0 / 5%);
+    margin-block: -1rem;
+    margin-inline: -2rem;
+    padding-block: 1rem;
+    padding-inline: 1rem;
+  }
+
+  :global(.dark #main-article summary) {
+    color: rgb(255 255 255 / 65%);
+    background-color: rgb(255 255 255 / 5%);
   }
 
   :global(#main-article summary:hover) {
-    opacity: 1;
-    filter: brightness(1.25);
+    color: rgb(0 0 0 / 85%);
+    background-color: rgb(0 0 0 / 8%);
   }
 
-  :global(#main-article summary::marker) {
-    opacity: 0.7;
+  :global(.dark #main-article summary:hover) {
+    color: rgb(255 255 255 / 85%);
+    background-color: rgb(255 255 255 / 10%);
   }
 
-  :global(#main-article summary:hover::marker) {
-    opacity: 1;
+  :global(#main-article details[open] > summary) {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  :global(#main-article details[open] > summary::after) {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: rgb(0 0 0 / 15%);
+  }
+
+  :global(.dark #main-article details[open] > summary::after) {
+    background-color: rgb(255 255 255 / 20%);
+  }
+
+  :global(#main-article .markdown-alert) {
+    margin-block: 1rem;
+    border-radius: 0.375rem;
+    border-width: 1px;
+    border-left-width: 0.375rem;
+  }
+
+  :global(#main-article .markdown-alert-note) {
+    border-color: var(--color-note);
+    border-color: color-mix(in srgb, var(--color-note) 30%, transparent);
+    border-left-color: var(--color-note);
+  }
+
+  :global(#main-article .markdown-alert-tip) {
+    border-color: var(--color-tip);
+    border-color: color-mix(in srgb, var(--color-tip) 30%, transparent);
+    border-left-color: var(--color-tip);
+  }
+
+  :global(#main-article .markdown-alert-important) {
+    border-color: var(--color-important);
+    border-color: color-mix(in srgb, var(--color-important) 30%, transparent);
+    border-left-color: var(--color-important);
+  }
+
+  :global(#main-article .markdown-alert-warning) {
+    border-color: var(--color-warning);
+    border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
+    border-left-color: var(--color-warning);
+  }
+
+  :global(#main-article .markdown-alert-caution) {
+    border-color: var(--color-caution);
+    border-color: color-mix(in srgb, var(--color-caution) 30%, transparent);
+    border-left-color: var(--color-caution);
+  }
+
+  :global(#main-article .markdown-alert > *) {
+    margin-top: 0;
+  }
+
+  :global(#main-article .markdown-alert-title) {
+    margin-block: 0.5rem;
   }
 </style>

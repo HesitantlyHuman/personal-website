@@ -111,7 +111,7 @@ export default function SearchCollection({ entry_name, data, tags }: Props) {
                   >
                     <svg
                       class={cn(
-                        "shrink-0 size-5 fill-black/50 dark:fill-white/50",
+                        "shrink-0 size-4 fill-black/50 dark:fill-white/50",
                         "transition-colors duration-300 ease-in-out",
                         filter().has(tag) && "fill-black dark:fill-white"
                       )}
