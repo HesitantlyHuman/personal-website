@@ -11,7 +11,7 @@ interface Props {
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-const { title, description, image = "/demo_og_2.png" } = Astro.props;
+const { title, description, image = "/open-graph-test.png" } = Astro.props;
 
 const fontRegular = getURL("/fonts/atkinson-regular.woff");
 const fontBold = getURL("/fonts/atkinson-bold.woff");

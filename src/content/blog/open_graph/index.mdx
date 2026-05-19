@@ -1,0 +1,68 @@
+---
+title: "Generating Open Graph Images"
+summary: "TODO"
+date: "May 19 2026"
+draft: true
+tags:
+- Astro
+- Open Graph
+- Javascript
+nav_depth: 2
+---
+
+{/* This is a nice intro: Have you every shared a link to a friend and wondered where the image preview came from? That’s the Open Graph Protocol, a set of HTML <meta> extensions that can enrich a link, originally invented at Facebook. This blog post describes how you can generate these images on build time in the Astro web framework. */}
+
+{/* TODO: Figure out the remaining tags */}
+
+{/* TODO: Fix link */}
+
+## Introduction
+As part of finalizing my configuration of this site (see [this post]() for more details about that), I needed to update the open graph image included in the metadata sent out by every page in this site. If you don't know what that is, [The Open Graph Protocol](https://ogp.me/) is a way of controlling and customizing how a website is presented, when links from that site are shared on platforms that support the protocol. For example, here is how it looks when you share this blog post on Discord (meta, I know):
+
+{/* TODO: Example image of this blog post */}
+
+While there are a lot of different metadata properties that you can set for implementers of Open Graph to read, these are the properties that are relevant:
+
+- `og:title`: The title of your "object" (read "page", or "blog post", etc).
+- `og:description`: A one or two sentence description of your object.
+- `og:type`: The type of your object. For our case, we will be using either `website` or `article`.
+- `og:image`: This is a URL for the image which represents your object.
+- `og:image:alt`: A description of what is in the image, for accessability purposes.
+- `og:url`: The canonical URL of your object.
+
+There are also some additional properties which we will need to address for articles in particular, and those are:
+
+- `article:published_time`: When the article was first published.
+- `article:modified_time`: When the article was last changed.
+- `article:author`: Writers of the article (just me, since this is a personal site).
+- `article:section`: A high-level section name.
+- `article:tag`: Tags associated with the article.
+
+## The Problem
+As you can see, we have quite the list of metadata properties that we need to make sure are accessible when implementers (like Facebook, X, Discord, etc) query our links. Luckily, most of these properties either don't change (like the author for my blog posts) or are easy to access (like, description or title).
+
+Unfortunately, the most important part of making a strong impression with an Open Graph link, is also the hardest part: and that is the image.
+
+While it would be relatively simple for me to just set the same image for every page in the site, I wanted something with a bit more style than that. I wanted each image that was shared to be specific to the page being linked. Also, importantly, some implementations of Open Graph--like X's, for example--don't prominently display most of the metadata, instead choosing to simply display the image.
+
+For the content to be understandable, I needed the important information to be visible in the image as well.
+
+### Generating Images
+So. What are my options? The first question I needed to ask myself was this: Am I willing to hand-make a customized Open Graph image for every new blog and project post on the site?..
+
+_**HELL. NO**_
+
+So, I needed to figure out a way that I could generate the images, and then automatically serve those generated images in the page header, along with the rest of the Open Graph metadata.
+
+**The Plan**
+So how do we get this done? Since I am not a web-dev, I figured that it would be prudent to look around a bit first, see how other people have tackled this problem.
+
+I found [this post](https://cassidoo.co/post/og-image-gen-astro/) by Cassidy Williams, which linked to [this post](https://www.emgoto.com/astro-social-card/) by Emma Goto. They both used the Javascript library [Puppeteer](https://pptr.dev/) to generate their Open Graph images.
+
+The basic idea works like this:
+1. Create a new page for your Open Graph design, where you can style, layout and configure to your hearts content.
+2. At build time, pass in the appropriate extra information to render that page.
+3. Use Puppeteer to control Chrome and take a screenshot of your rendered design.
+4. Profit.
+
+satori
