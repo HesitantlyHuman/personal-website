@@ -140,20 +140,24 @@ const stack = [
 
           <p>I enjoy work where <b><i>quality matters</i></b>: understanding the domain, defining the problem carefully, and building systems that are <b><i>explainable</i></b>, <b><i>maintainable</i></b>, and <b><i>robust</i></b>. My technical interests (and more of my free time than I would like to admit) fall under <b><i>optimization</i></b>, <b><i>probability</i></b>, <b><i>game theory</i></b>, and <b><i>algorithms</i></b>.</p>
 
-          <p>Outside of work I write music, make occasional procedural art, and optimize the fun out of new board games in the name of <b><i>glorious victory</i></b>! Feel free to poke around and see what I am up to, and don't be afraid to reach out! <i>(Remember that species of the mathematicus genus are generally more scared of you than you are of them)</i></p>
-
-          <!-- About Image -->
-          <div class="w-full lg:w-auto flex justify-center lg:justify-start">
-            <div class="relative size-[12rem] rounded-full overflow-hidden shadow-2xl dark:shadow-none bg-black/5 dark:bg-white/5">
-              <Picture
-                src={AboutPhoto}
-                formats={['avif', 'webp']}
-                alt="Photo of Tanner Sims"
-                fit="cover"
-                width="600"
-                class="h-full w-full object-cover scale-[1.25] -translate-x-[12%] -translate-y-[25%]"
-              />
+          <div class="flex flex-col sm:flex-row-reverse items-center sm:items-start gap-5 !mt-0">
+            <!-- About Image -->
+            <div class="shrink-0 my-[2rem]">
+              <div class="relative size-[12rem] rounded-full overflow-hidden shadow-2xl dark:shadow-none bg-black/5 dark:bg-white/5">
+                <Picture
+                  src={AboutPhoto}
+                  formats={['avif', 'webp']}
+                  alt="Tanner Sims smiling at graduation"
+                  fit="cover"
+                  width="600"
+                  class="h-full w-full object-cover scale-[1.25] -translate-x-[12%] -translate-y-[25%]"
+                />
+              </div>
             </div>
+
+            <p class="flex-1 my-[2rem]">
+              Outside of work I write music, make occasional procedural art, and optimize the fun out of new board games in the name of <b><i>glorious victory</i></b>! Feel free to poke around and see what I am up to, and don't be afraid to reach out! <i>(Remember that species of the mathematicus genus are generally more scared of you than you are of them)</i>
+            </p>
           </div>
         </article>
       </section>
