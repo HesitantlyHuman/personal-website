@@ -78,24 +78,24 @@ const fontFace = `
 <meta property="og:url" content={Astro.url} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
-<meta property="og:image" content={new URL(image, Astro.url)} />
+<meta property="og:image" content={getURL(image)} />
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content={Astro.url} />
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
-<meta property="twitter:image" content={new URL(image, Astro.url)} />
+<meta property="twitter:image" content={getURL(image)} />
 
 <!-- Sitemap -->
-<link rel="sitemap" href=`/${import.meta.env.BASE_URL}sitemap-index.xml` />
+<link rel="sitemap" href={getURL("sitemap-index.xml")} />
 
 <!-- RSS Feed -->
 <link
   rel="alternate"
   type="application/rss+xml"
   title={title}
-  href={`${Astro.site}${import.meta.env.BASE_URL}rss.xml`}
+  href={getURL("rss.xml")}
 />
 
 <!-- Global Scripts -->
