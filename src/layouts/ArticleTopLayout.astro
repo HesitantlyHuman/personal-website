@@ -9,7 +9,9 @@ type Props = {
 
 const { entry } = Astro.props;
 const { collection, data, body } = entry;
-const { title, summary, date } = data;
+const { title, summary, date, updated } = data;
+
+const showUpdated = updated && updated.toDateString() !== date.toDateString();
 
 const demoUrl = collection === "projects" ? data.demoUrl : null;
 const repoUrl = collection === "projects" ? data.repoUrl : null;
@@ -49,23 +51,56 @@ const repoUrl = collection === "projects" ? data.repoUrl : null;
             Back to {collection}
         </div>
     </a>
-    <div class="flex flex-wrap text-sm uppercase mt-12 gap-3 opacity-75">
-        <div class="flex items-center gap-2">
+
+    <div
+        class="mt-12 flex flex-col gap-2 text-sm uppercase opacity-75 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2"
+    >
+        <span class="flex items-center gap-2">
             <svg class="size-5 stroke-current">
                 <use href={getURL("ui.svg#calendar")}></use>
             </svg>
-            {formatDate(date)}
-        </div>
-        <div class="flex items-center gap-2">
+            Published {formatDate(date)}
+        </span>
+
+        {
+            showUpdated && (
+                <>
+                    <span
+                        class="hidden sm:inline-flex items-center self-center text-[.6rem] leading-none"
+                        aria-hidden="true"
+                    >
+                        •
+                    </span>
+
+                    <span class="flex items-center gap-2">
+                        <svg class="size-5 stroke-current">
+                            <use href={getURL("ui.svg#updated")} />
+                        </svg>
+                        Updated {formatDate(updated)}
+                    </span>
+                </>
+            )
+        }
+
+        <span
+            class="hidden sm:inline-flex items-center self-center text-[.6rem] leading-none"
+            aria-hidden="true"
+        >
+            •
+        </span>
+
+        <span class="flex items-center gap-2">
             <svg class="size-5 stroke-current">
                 <use href={getURL("ui.svg#book-open")}></use>
             </svg>
             {readingTime(body)}
-        </div>
+        </span>
     </div>
+
     <h1 class="text-3xl font-semibold text-black dark:text-white mt-4">
         {title}
     </h1>
+
     <div class="mt-1">
         {summary}
     </div>
@@ -78,7 +113,7 @@ const repoUrl = collection === "projects" ? data.repoUrl : null;
                         target="_blank"
                         class="group flex gap-2 items-center px-3 py-1.5 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/5 hover:dark:bg-white/15 blend"
                     >
-                        <svg class="size-4">
+                        <svg class="size-3">
                             <use
                                 href={getURL("ui.svg#globe")}
                                 class="fill-current group-hover:fill-black group-hover:dark:fill-white blend"
@@ -95,7 +130,7 @@ const repoUrl = collection === "projects" ? data.repoUrl : null;
                         target="_blank"
                         class="group flex gap-2 items-center px-3 py-1.5 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/5 hover:dark:bg-white/15 blend"
                     >
-                        <svg class="size-4">
+                        <svg class="size-3">
                             <use
                                 href={getURL("ui.svg#link")}
                                 class="fill-current group-hover:fill-black group-hover:dark:fill-white blend"
