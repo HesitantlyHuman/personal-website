@@ -64,14 +64,6 @@ function toDataUrl(buffer: Buffer, mimeType: string): string {
     return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
 
-function slugify(input: string): string {
-    return input
-        .toLowerCase()
-        .replace(/['"]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-}
-
 async function* walkFiles(dir: string): AsyncGenerator<string> {
     let entries: Dirent[];
 
@@ -100,15 +92,17 @@ function getContentSlug(collectionDir: string, filePath: string): string {
     const relativePath = path.relative(collectionDir, filePath);
     const parsed = path.parse(relativePath);
 
-    // Handles:
-    // src/content/blog/my-post/index.mdx -> my-post
     if (parsed.name === "index") {
-        return slugify(path.dirname(relativePath));
+        return path
+            .dirname(relativePath)
+            .split(path.sep)
+            .join("/");
     }
 
-    // Handles:
-    // src/content/blog/my-post.mdx -> my-post
-    return slugify(path.join(parsed.dir, parsed.name));
+    return path
+        .join(parsed.dir, parsed.name)
+        .split(path.sep)
+        .join("/");
 }
 
 async function readCollection(collection: CollectionName): Promise<ContentEntry[]> {
