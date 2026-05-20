@@ -6,6 +6,8 @@ import satori from "satori";
 import sharp from "sharp";
 import matter from "gray-matter";
 
+import { SITE, BLOG, PROJECTS, SEARCH, WORK } from "../src/consts";
+
 const WIDTH = 1200;
 const HEIGHT = 630;
 
@@ -26,27 +28,31 @@ type ContentEntry = {
     summary: string;
 };
 
-// TODO: Update these to reflect the actual pages
-// Or have them pull from the actual frontmatter
-// TODO: Add the work page
-// TODO: Add the search page
 const staticPages: OgPage[] = [
     {
         outputPath: "public/og/index.png",
-        title: "Tanner Sims",
-        summary:
-            "Mathematician and machine learning engineer working on models, algorithms, and well-made technical systems.",
+        title: SITE.TITLE,
+        summary: SITE.DESCRIPTION,
     },
     {
         outputPath: "public/og/blog.png",
-        title: "Blog",
-        summary: "Writing on topics I am passionate about.",
+        title: BLOG.TITLE,
+        summary: BLOG.DESCRIPTION,
     },
     {
         outputPath: "public/og/projects.png",
-        title: "Projects",
-        summary:
-            "Technical projects in machine learning, algorithms, tooling, games, and procedural art.",
+        title: PROJECTS.TITLE,
+        summary: PROJECTS.DESCRIPTION,
+    },
+    {
+        outputPath: "public/og/search.png",
+        title: SEARCH.TITLE,
+        summary: SEARCH.DESCRIPTION,
+    },
+    {
+        outputPath: "public/og/work.png",
+        title: WORK.TITLE,
+        summary: WORK.DESCRIPTION,
     },
 ];
 
