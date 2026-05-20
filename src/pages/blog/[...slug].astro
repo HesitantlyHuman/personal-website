@@ -2,6 +2,7 @@
 import { type CollectionEntry, getCollection } from "astro:content";
 import PageLayout from "@layouts/PageLayout.astro";
 import ArticleLayout from "@layouts/ArticleLayout.astro";
+import { getURL } from "@utils/url";
 
 // Create the static blog pages
 export async function getStaticPaths() {
@@ -18,6 +19,16 @@ const post = Astro.props;
 const { title, summary } = post.data;
 ---
 
-<PageLayout filePath={post.filePath} title={title} description={summary}>
+<PageLayout
+	filePath={post.filePath}
+	title={title}
+	description={summary}
+	image={getURL(`/og/${post.collection}/${post.slug}.png`)}
+	type="article"
+	publishedTime={post.data.date}
+	modifiedTime={post.data.updated}
+	section={post.data.category}
+	tags={post.data.tags}
+>
 	<ArticleLayout entry={post} />
 </PageLayout>

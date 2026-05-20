@@ -1,24 +1,44 @@
 ---
-type Props = {
-  filePath?: string;
-  title: string;
-  description: string;
-};
-
 import "@styles/global.css";
 import BaseHead from "@components/BaseHead.astro";
 import Header from "@components/Header.astro";
 import Footer from "@components/Footer.astro";
 import Drawer from "@components/Drawer.astro";
-const { filePath, title, description } = Astro.props;
-
 import { SITE } from "@consts";
+
+type BaseMetaProps = {
+  filePath?: string;
+  title: string;
+  description: string;
+  image: string;
+};
+
+type WebsiteMetaProps = BaseMetaProps & {
+  type?: "website";
+};
+
+type ArticleMetaProps = BaseMetaProps & {
+  type: "article";
+  publishedTime: Date | string;
+  modifiedTime?: Date | string;
+  section?: string;
+  tags?: string[];
+};
+
+type Props = WebsiteMetaProps | ArticleMetaProps;
+
+const { filePath, ...meta } = Astro.props;
+
+const headProps: Props = {
+  ...meta,
+  title: `${meta.title} | ${SITE.TITLE}`,
+};
 ---
 
 <!doctype html>
 <html class="scroll-smooth" lang="en" transition:animate="none">
   <head>
-    <BaseHead title={`${title} | ${SITE.TITLE}`} description={description} />
+    <BaseHead {...headProps} />
   </head>
   <body>
     <Header />

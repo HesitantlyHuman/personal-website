@@ -14,7 +14,7 @@ const repo = "https://github.com/HesitantlyHuman/personal-website";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://hesitantlyhuman.github.io",
+  site: "https://hesitantlyhuman.com",
   integrations: [sitemap(), solidJs(), tailwind({ applyBaseStyles: false }), mdx()],
   markdown: {
     shikiConfig: {

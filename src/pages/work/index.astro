@@ -32,7 +32,11 @@ function formatWorkDate(input: Date | string) {
 }
 ---
 
-<PageLayout title={WORK.TITLE} description={WORK.DESCRIPTION}>
+<PageLayout
+  title={WORK.TITLE}
+  description={WORK.DESCRIPTION}
+  image={getURL("/og/work.png")}
+>
   <TopLayout>
     <div
       class="animate flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"

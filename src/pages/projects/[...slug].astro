@@ -2,6 +2,7 @@
 import { type CollectionEntry, getCollection } from "astro:content";
 import PageLayout from "@layouts/PageLayout.astro";
 import ArticleLayout from "@layouts/ArticleLayout.astro";
+import { getURL } from "@utils/url";
 
 // Create the static projects pages
 export async function getStaticPaths() {
@@ -18,6 +19,16 @@ const project = Astro.props;
 const { title, summary } = project.data;
 ---
 
-<PageLayout filePath={project.filePath} title={title} description={summary}>
+<PageLayout
+  filePath={project.filePath}
+  title={title}
+  description={summary}
+  image={getURL(`/og/${project.collection}/${project.slug}.png`)}
+  type="article"
+  publishedTime={project.data.date}
+  modifiedTime={project.data.updated}
+  section={project.data.category}
+  tags={project.data.tags}
+>
   <ArticleLayout entry={project} />
 </PageLayout>

@@ -5,6 +5,7 @@ import TopLayout from "@layouts/TopLayout.astro";
 import BottomLayout from "@layouts/BottomLayout.astro";
 import Search from "@components/Search";
 import { SEARCH } from "@consts";
+import { getURL } from "@utils/url";
 
 const posts = (await getCollection("blog")).filter((post) => !post.data.draft);
 
@@ -15,7 +16,11 @@ const projects = (await getCollection("projects")).filter(
 const data = [...posts, ...projects] as CollectionEntry<"blog">[];
 ---
 
-<PageLayout title={SEARCH.TITLE} description={SEARCH.DESCRIPTION}>
+<PageLayout
+  title={SEARCH.TITLE}
+  description={SEARCH.DESCRIPTION}
+  image={getURL("/og/search.png")}
+>
   <TopLayout>
     <div class="animate">
       <h1 class="text-3xl font-semibold text-black dark:text-white mt-2">
