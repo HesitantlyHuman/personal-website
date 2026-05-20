@@ -24,7 +24,7 @@ Sadly no. Any website that wants the VIP treatment (a nice preview-card) needs t
 
 For example, here is how it looks when you share this blog post on Discord (meta, I know):
 
-{/* TODO: Example image of this blog post */}
+![Open Graph image of this blog post, as displayed by Discord](./discord_example.png)
 
 As part of finalizing my configuration of this site (see [this post](https://hesitantlyhuman.com/projects/personal_website/) for more details about that), I needed to update the Open Graph image included in the metadata made available by every page in this site. Astro Sphere--the template that I contribute to, which this site is based on--already had an Open Graph image, but I needed something which was specific to the brand and identity of *my* site.
 
@@ -61,7 +61,7 @@ _**HELL. NO.**_
 
 So, I needed to figure out a way that I could generate the images, and then automatically serve those generated images in the page header, along with the rest of the Open Graph metadata.
 
-### the Plan
+### The Plan
 So how do we get this done? Since I am not a web-dev, I figured that it would be prudent to look around a bit first, and see how other people have tackled this problem.
 
 I found [this post](https://cassidoo.co/post/og-image-gen-astro/) by Cassidy Williams, which linked to [this post](https://www.emgoto.com/astro-social-card/) by Emma Goto. They both used the Javascript library [Puppeteer](https://pptr.dev/) to generate their Open Graph images.
@@ -101,7 +101,10 @@ The structure of that script is fairly simple:
 
 Because this script runs before the site is built, none of the image-generation dependencies are shipped to the client. The browser only ever sees the final `.png` files. Wonderful. The website gets to look fancy, and I can continue to feed my fantasies of static compilation.
 
-**Step 0**
+
+### Implementing the Plan
+
+#### Step 0
 Before starting load my assets, I first defined a tiny shared type for the pages that need images. The generated image only needs three things: where it should be written, what title to render, and what summary to render.
 
 ```ts
@@ -132,7 +135,8 @@ const staticPages: OgPage[] = [
 
 These are the non-article pages: the homepage, blog index, project index, search page, and so on. Since I already had this metadata defined elsewhere in my site constants, the script imports those constants instead of duplicating the strings. Small duplication today becomes mysterious stale metadata tomorrow, and I prefer my bugs fresh.
 
-**Step 1**
+
+#### Step 1
 Next, the script loads the assets that Satori needs. The background template lives under `src/assets`, not `public`, because I only want to serve the final generated images, not the raw template.
 
 ```ts
@@ -153,7 +157,7 @@ const backgroundSrc = toDataUrl(background, "image/png");
 
 Satori can render images, but it needs access to them while generating the SVG. Encoding the background as a data URL keeps the script self-contained: Satori receives one big embedded image, and then we draw the title and summary on top.
 
-**Step 2**
+#### Step 2
 For blog and project posts, I read the frontmatter directly from the `.md` and `.mdx` files. Astro already has this information during the normal build, but this script is intentionally standalone, so it needs to collect the metadata itself.
 
 ```ts
@@ -187,7 +191,7 @@ async function readCollection(collection: CollectionName): Promise<ContentEntry[
 
 The important details here are that draft posts are skipped, and that the generated image slug matches the eventual page slug. If the post lives at `/blog/my-post`, then the image should live somewhere predictable, like `/og/blog/my-post.png`.
 
-**Step 3**
+#### Step 3
 The actual Satori call looks a lot like writing a small React component. In my case, the component has one full-size background image and one absolutely positioned text block.
 
 ```tsx
@@ -263,7 +267,7 @@ const svg = await satori(
 
 This is where the “baked template” approach pays off. The logo, avatar, horizon, stars, and footer are already in the background image. Satori only needs to handle text layout, which is exactly the kind of task I want to give it. We are not asking it to recreate an entire website. We are asking it to put words in a box. A noble calling.
 
-**Step 4**
+#### Step 4
 Satori gives us an SVG string, but most Open Graph consumers expect a normal image file. So after rendering the SVG, I pass it through `sharp` and convert it to a PNG.
 
 ```ts
@@ -272,7 +276,7 @@ return sharp(Buffer.from(svg)).png().toBuffer();
 
 That tiny line is the bridge between “I rendered some JSX-shaped SVG” and “I now have a shareable Open Graph image.”
 
-**Step 4**
+#### Step 5
 Finally, the script combines the static pages with the generated content pages, clears the old output directory, and writes a fresh set of images.
 
 ```ts
