@@ -3,13 +3,12 @@ title: "Generating Open Graph Images with Astro"
 summary: "Generating custom Open Graph preview images for Astro pages at build time with Satori and Sharp."
 category: "Web Development"
 date: "May 19 2026"
-updated: "May 19 2026"
 draft: false
 tags:
 - Astro
 - Open Graph
-- Javascript
-- Typescript
+- JavaScript
+- TypeScript
 - Satori
 - Sharp
 nav_depth: 2
@@ -20,76 +19,98 @@ You've probably seen an Open Graph image before, even if you didn't know what it
 
 You thought that was just web magic? (I'll admit that I did)
 
-Sadly no. Any website that wants the VIP treatment (a nice preview-card) needs to tell platforms exactly how each page should be presented, using [The Open Graph Protocol](https://ogp.me/). Open Graph lets a page define its title, description, preview image and all sorts of useful properties.
+Sadly, no. Any website that wants the VIP treatment (a nice preview card) needs to tell platforms exactly how each page should be presented using [The Open Graph Protocol](https://ogp.me/). Open Graph lets a page define its title, description, preview image and all sorts of other useful properties.
 
 For example, here is how it looks when you share this blog post on Discord (meta, I know):
 
 ![Open Graph image of this blog post, as displayed by Discord](./discord_example.png)
 
-As part of finalizing my configuration of this site (see [this post](https://hesitantlyhuman.com/projects/personal_website/) for more details about that), I needed to update the Open Graph image included in the metadata made available by every page in this site. Astro Sphere--the template that I contribute to, which this site is based on--already had an Open Graph image, but I needed something which was specific to the brand and identity of *my* site.
+As part of finalizing this site, I needed to update the Open Graph image included in each page's metadata. Astro Sphere--the template this site is based on, and a project that I contribute to--already has an Open Graph image, but I wanted something specific to the brand and identity of *my* site.
 
-While there are a lot of different metadata properties that you can set for implementers of Open Graph to read, these are the properties that are relevant:
+*(For more about the site itself, see [this project post](https://hesitantlyhuman.com/projects/personal_website/).)*
 
-- `og:title`: The title of your "object" (read "page", or "blog post", etc).
-- `og:description`: A one or two sentence description of your object.
-- `og:type`: The type of your object. For our case, we will be using either `website` or `article`.
-- `og:image`: This is a URL for the image which represents your object.
-- `og:image:alt`: A description of what is in the image, for accessability purposes.
-- `og:url`: The canonical URL of your object.
+## What Open Graph Needs
+What do we need to do to get Open Graph working?
 
-There are also some additional properties which we will need to address for articles in particular, and those are:
+Implementers of the protocol get the information they need by reading `meta` tags on the linked page. Using these tags, you can set the title, description, type, image and URL of your preview object.
 
-- `article:author`: Writers of the article (just me, since this is a personal site).
-- `article:published_time`: When the article was first published.
-- `article:modified_time`: When the article was last changed.
-- `article:section`: A high-level section name.
-- `article:tag`: Tags associated with the article.
+That looks something like this:
+
+```html
+<meta property="og:title" content="My Page Title" />
+<meta property="og:description" content="A description of the page." />
+```
+
+For some of my blog and project pages, I also needed to set additional, article-specific metadata: the author, publish date, modified date, general category, and optional tags.
 
 ## The Problem
-As you can see, we have quite the list of metadata properties that we need to make sure are accessible when implementers (like Facebook, X, Discord, etc) query our links. Luckily, most of these properties either don't change (like the author for my blog posts) or are easy to access (like, description or title).
+As you can see, we have quite the list of metadata properties to set. Luckily, most of them either don't change, like the author of my blog posts, or are easy to access, like the page's title and description.
 
-Unfortunately, the most important part of making a strong impression with an Open Graph link, is also the hardest part: and that is the image.
+Unfortunately, the most important part of making a strong impression is also the hardest part: the image.
 
-While it would be relatively simple for me to just set the same image for every page in the site, I wanted something with a bit more style than that. I wanted each image that was shared to be specific to the page being linked. Also, importantly, some implementations of Open Graph--like X's, for example--don't prominently display most of the metadata, instead choosing to simply display the image.
+It would have been simple to just use the same generic image for every page, but I wanted something with a bit more style than that. I wanted each image that was shared to be specific to the page being linked.
 
-For the content to be understandable, I needed the important information (like title and description) to be visible in the image as well.
+That's important because sometimes the image is all that you get to see. X, for example, shows almost nothing except the image.
 
-## Generating Images
-So. What are my options? The first question I needed to ask myself was this: Am I willing to hand-make a customized Open Graph image for every new blog and project post on the site?..
+For my previews to be understandable, I needed the important information--like title and description--to be visible directly in the image.
+
+## What I Wanted
+So my target was pretty clear: I needed a custom Open Graph image for each page.
+
+The first question I needed to ask myself was this: Was I willing to hand-make a customized Open Graph image for every new blog and project post on the site?..
 
 _**HELL. NO.**_
 
-So, I needed to figure out a way that I could generate the images, and then automatically serve those generated images in the page header, along with the rest of the Open Graph metadata.
+So I needed to figure out a way that I could generate each of the images, and then automatically point each page's metadata at the correct generated image.
 
-### The Plan
+Broadly, the system I wanted needed to do three things:
+1. Read the metadata for each page that needed an Open Graph image.
+2. Generate an Open Graph image for each of those pages, and place that image where Astro could serve it (i.e. the `/public` folder).
+3. Point each page's Open Graph tags to the correct image.
+
+Beyond just achieving those goals, I wanted the process to be automatic. I didn't want a new manual step in my build or deployment process. Ideally, I could forget that this generator even existed, and it would keep on producing high-quality Open Graph images for every new project and blog post.
+
+Finally, I wanted my site to stay fast. I was willing to let it do a little extra work at build time, but I didn't want image generation anywhere near my page load times. I wanted the final site to only need to serve static `.png` files.
+
+The real kicker was going to be step two. The most complicated part isn't reading some metadata that was designed to be read, or pointing a URL in the right location; the hardest part would be generating an image that looks good, fits the site, and represents each page clearly.
+
+## Option 1: Screenshots with Puppeteer
 So how do we get this done? Since I am not a web-dev, I figured that it would be prudent to look around a bit first, and see how other people have tackled this problem.
 
-I found [this post](https://cassidoo.co/post/og-image-gen-astro/) by Cassidy Williams, which linked to [this post](https://www.emgoto.com/astro-social-card/) by Emma Goto. They both used the Javascript library [Puppeteer](https://pptr.dev/) to generate their Open Graph images.
+I found [this post](https://cassidoo.co/post/og-image-gen-astro/) by Cassidy Williams, which linked to [this post](https://www.emgoto.com/astro-social-card/) by Emma Goto. They both used the JavaScript library [Puppeteer](https://pptr.dev/) to generate their Open Graph images.
 
 The basic idea works like this:
-1. Create a new page for your Open Graph design, where you can style, layout and configure to your heart's content.
+1. Create a new page for your Open Graph design, where you can style, lay out and configure to your heart's content.
 2. At build time, pass in the appropriate extra information to render that page. That would be things like an article title, description, author, etc.
 3. Use Puppeteer to control Chrome and take a screenshot of your rendered design.
 4. Profit.
 
-While this would work great, and obviously gets the job done (Cassidy's Open Graph image here looks great, and really sells the vibe of the site!), it does have one major drawback, noted by Cassidy: Running Puppeteer to generate those screenshots can be slow.
+Here's an example of the Open Graph image for Cassidy's blog post, generated using the Puppeteer method:
 
-{/* TODO: explain why this option is slow. Like, how does it all work, and why does that take time. */}
+![Open Graph image of Cassidy Williams' blog post](./cassidy_williams_og_example.png)
 
-### The Plan--Version 2
-As I continued poking around, I found [this blog post](https://arne.me/blog/static-og-images-in-astro) by Arne Bahlo. Instead of taking a screenshot with something like Puppeteer, Arne uses an HTML and CSS to SVG rendering library called [Satori](https://github.com/vercel/satori).
+While this method would work great, and clearly gets the job done--Cassidy's Open Graph image here looks great, and really sells the vibe of her site!--it does have one major drawback. As noted by Cassidy in her post, Running Puppeteer to generate those screenshots can be slow.
 
-Once we can get our Open Graph image as an SVG, all that is left is to render it into a `.png` file. For that, I'll be using `sharp` (Arne used `sharp` as well, and I figure don't fix what aint broke, right?).
+To generate those images, Puppeteer is doing something much heavier than just "make this text an image". Puppeteer starts and controls a real browser to render the HTML template page. While the browser Puppeteer is using for this is headless--meaning that it doesn't need to run the UI or render anything to the screen--the machinery is all still there. With this method, Chrome has to start up, load the Open Graph template page, run any relevant JavaScript, apply CSS styling, lay out the page, paint the result, and then take a screenshot.
 
-To start, I whipped up a quick template Open Graph image, based on the styling of my website. It looked a little something like this (well, this is actually the final template, but you get the idea):
+Reusing the same browser instance across multiple Open Graph images helps, but every image still requires loading the page, waiting for it to render, and then waiting to capture a screenshot. Depending on how many pages you need to support, that can get a little long, and I felt like I needed a bit more quality DX (Developer Experience) in my life.
 
-IMAGE HERE
+## Option 2: Satori and Sharp
+Determined to find a simpler approach, I kept searching. As I continued poking around, I found [this blog post](https://arne.me/blog/static-og-images-in-astro) by Arne Bahlo. Instead rendering a page with Chrome and taking a screenshot, Arne uses an HTML and CSS to SVG rendering library called [Satori](https://github.com/vercel/satori).
 
-Because I am the only Author on my site, and the url and logo don't change, I can get away with baking all of those elements directly into the template. That way, the only thing that we need to worry about rendering with Satori is the title and description.
+Once we can get our Open Graph image as an SVG, all that is left is to render it as a `.png` file. For that, I'll be using `sharp`. Arne used `sharp` as well, and I figure don't fix what ain't broke, right?
 
-> A couple of different sources mention that Satori can have difficulty with rendering certain fonts or css styling, and Satori only supports a subset of css features. If you do plan on using Satori yourself, make sure that you have your branding fonts in a `.woff`, `.ttf`, or `.otf` format, and that you can do the necessary styling with Satori's css subset. `.woff2` is not currently supported as of the writing of this article.
+This approach is perfect, because most of my image is static. Since I am the only author on my site, and the URL and logo don't change, I can get away with baking all of those elements directly into the template. That way, the only things that we need to worry about rendering with Satori are the title and description.
 
-Instead of doing anything fancy like creating an Astro enpoint (like you can see in Arne's post), I just created a `.tsx` script which would load all of my articles and generate images for them.
+To start, I whipped up a quick template Open Graph image, based on the styling of my website. It looked a little something like this--well, this is actually the final template, but you get the idea:
+
+![Open Graph image template for this site](./open-graph-template.png)
+
+
+> [!NOTE]
+> Satori can have difficulty with rendering certain fonts and it only supports a subset of CSS features. If you do plan on using Satori yourself, make sure that you have your branding fonts in a `.woff`, `.ttf`, or `.otf` format, and that you can do the necessary styling with Satori's CSS subset. `.woff2` is not currently supported as of the writing of this article.
+
+Instead of doing anything fancy like creating an Astro endpoint (like you can see in Arne's post), I created a standalone `.tsx` script that loads all of my articles and generates images for them.
 
 The structure of that script is fairly simple:
 
@@ -101,11 +122,19 @@ The structure of that script is fairly simple:
 
 Because this script runs before the site is built, none of the image-generation dependencies are shipped to the client. The browser only ever sees the final `.png` files. Wonderful. The website gets to look fancy, and I can continue to feed my fantasies of static compilation.
 
+## Building the Image Generator
+Now that we have a plan, let's get down to business to defeat the Huns.
 
-### Implementing the Plan
+![Screenshot from Mulan "I'll make a man out of you" montage, with the subtitle "Let's get down to business"](./lets_get_down_to_business.jpg)
 
-#### Step 0
-Before starting load my assets, I first defined a tiny shared type for the pages that need images. The generated image only needs three things: where it should be written, what title to render, and what summary to render.
+...I mean, let's make the Open Graph image generator.
+
+### Step 0: Define the Pages
+For my site, there are two kinds of pages that need Open Graph images: static pages, like the homepage and project index, and content pages, like individual blog and project posts.
+
+The static pages can be listed directly. Since I already have their metadata defined elsewhere in my site constants, the script imports those constants instead of duplicating.
+
+To keep static pages and content pages using the same generation code, I defined a small shared type. Remember that most of the Open Graph layout does not change from page to page, so each generated image only needs three things: where it should be written, what title to render, and what summary to render.
 
 ```ts
 type OgPage = {
@@ -133,11 +162,8 @@ const staticPages: OgPage[] = [
 ];
 ```
 
-These are the non-article pages: the homepage, blog index, project index, search page, and so on. Since I already had this metadata defined elsewhere in my site constants, the script imports those constants instead of duplicating the strings. Small duplication today becomes mysterious stale metadata tomorrow, and I prefer my bugs fresh.
-
-
-#### Step 1
-Next, the script loads the assets that Satori needs. The background template lives under `src/assets`, not `public`, because I only want to serve the final generated images, not the raw template.
+### Step 1: Load the Assets
+Next, the script loads the assets that Satori needs. The background template is stored in `src/assets`, not `public`, because I only want to serve the final generated images, not the raw template.
 
 ```ts
 async function readAsset(relativePath: string): Promise<Buffer> {
@@ -155,10 +181,10 @@ const background = await readAsset("src/assets/og/open-graph-template.png");
 const backgroundSrc = toDataUrl(background, "image/png");
 ```
 
-Satori can render images, but it needs access to them while generating the SVG. Encoding the background as a data URL keeps the script self-contained: Satori receives one big embedded image, and then we draw the title and summary on top.
+Satori can render images, but it needs access to them while generating the SVG. Encoding the background as a data URL keeps the script self-contained.
 
-#### Step 2
-For blog and project posts, I read the frontmatter directly from the `.md` and `.mdx` files. Astro already has this information during the normal build, but this script is intentionally standalone, so it needs to collect the metadata itself.
+### Step 2: Read Post Metadata
+For blog and project posts, I read the frontmatter directly from the `.md` and `.mdx` files. Astro already has this information during the normal build, but since this script is intentionally standalone, we need to collect the metadata ourselves.
 
 ```ts
 async function readCollection(collection: CollectionName): Promise<ContentEntry[]> {
@@ -189,10 +215,10 @@ async function readCollection(collection: CollectionName): Promise<ContentEntry[
 }
 ```
 
-The important details here are that draft posts are skipped, and that the generated image slug matches the eventual page slug. If the post lives at `/blog/my-post`, then the image should live somewhere predictable, like `/og/blog/my-post.png`.
+It is important that the generated image slug matches the eventual page slug. If the post lives at `/blog/my-post`, then the image should live somewhere predictable, like `/og/blog/my-post.png`. Later, the page metadata can point directly at that generated image URL.
 
-#### Step 3
-The actual Satori call looks a lot like writing a small React component. In my case, the component has one full-size background image and one absolutely positioned text block.
+### Step 3: Render SVGs
+The actual Satori call looks a lot like writing a small React component. In my case, the component has one full-size background image and one absolutely positioned text block, containing both the title and description of the page.
 
 ```tsx
 const svg = await satori(
@@ -265,18 +291,18 @@ const svg = await satori(
 );
 ```
 
-This is where the “baked template” approach pays off. The logo, avatar, horizon, stars, and footer are already in the background image. Satori only needs to handle text layout, which is exactly the kind of task I want to give it. We are not asking it to recreate an entire website. We are asking it to put words in a box. A noble calling.
+This is where the “baked template” approach pays off. The logo, avatar, horizon, stars, and footer are already in the background image. Satori only needs to handle text layout, which is exactly the kind of task I want to give it. I was not exactly jumping at the chance to work with Satori's limited CSS subset, no matter how mature the library is.
 
-#### Step 4
-Satori gives us an SVG string, but most Open Graph consumers expect a normal image file. So after rendering the SVG, I pass it through `sharp` and convert it to a PNG.
+We are not asking Satori to recreate an entire website here. We are asking it to put words in a box; truly a noble calling.
+
+### Step 4: Convert to PNGs
+Satori gives us an SVG string, but Open Graph consumers expect a URL to a "normal" image file, like a `.png` or `.jpg`. To get our final image, after rendering the SVG, I pass it through `sharp` and convert it to a `.png`.
 
 ```ts
 return sharp(Buffer.from(svg)).png().toBuffer();
 ```
 
-That tiny line is the bridge between “I rendered some JSX-shaped SVG” and “I now have a shareable Open Graph image.”
-
-#### Step 5
+### Step 5: Write the Results
 Finally, the script combines the static pages with the generated content pages, clears the old output directory, and writes a fresh set of images.
 
 ```ts
@@ -308,13 +334,12 @@ for (const page of pages) {
 }
 ```
 
-At the end of this process, every page has a stable image path. Static pages get paths like `/og/blog.png`, while posts get paths like `/og/blog/generating-open-graph-images-with-astro.png`. The metadata layer can then reference those paths without knowing anything about Satori, Sharp, fonts, templates, or the terrible bargain I made with TypeScript to make JSX run in a build script.
+At the end of this process, every page has a stable image path. Static pages get paths like `/og/blog.png`, while posts get paths like `/og/blog/generating-open-graph-images-with-astro.png`. The metadata layer can then reference those paths without knowing anything about Satori, Sharp, fonts, templates, or the terrible bargain I made with TypeScript to get JSX running in my build step.
 
 ## Serving the Images
+Generating the images is only half the job. The other half is making sure every page points to the correct image in its metadata. Luckily, this is the easy part. Your mileage may vary, depending on how your Astro project is configured, but for this site, all I needed to do was pass some props to the `PageLayout` component.
 
-Generating the images is only half the job. The other half is making sure every page points to the correct image in its metadata.
-
-For normal pages, I can use explicit image paths:
+For static pages, I can use explicit image paths:
 ```astro
 <PageLayout
   title={PROJECTS.TITLE}
@@ -323,7 +348,7 @@ For normal pages, I can use explicit image paths:
 >
 ```
 
-For article pages, the image path is derived from the collection and slug:
+And for article pages, the image path is derived from the collection and slug:
 ```astro
 <PageLayout
   filePath={project.filePath}
@@ -338,11 +363,20 @@ For article pages, the image path is derived from the collection and slug:
 >
 ```
 
-The layout then passes that information to the component responsible for the actual metadata tags (`BaseHead.astro`, in my case).
+The layout then passes that information to the component responsible for the actual metadata tags (`BaseHead.astro`, in my case), and we are officially in business:
 ```astro
 <meta property="og:image" content={imageURL} />
 <meta property="og:image:alt" content={`${title}: ${description}`} />
 ```
+
+## Conclusion
+The resulting solution works flawlessly for my site. I especially love that it is a set-it-and-forget-it setup; I don't ever need to worry about tinkering with it unless I want to change how the images look.
+
+Now, every time I push to `main`, the build will trigger, and the images are generated automatically. 
+
+The final site still serves plain static files. The image-generation code stays in the build step, the browser only sees `.png`s, and my links look a little less boring when they wander into Discord.
+
+Not too shabby for a day's work.
 
 ---
 
