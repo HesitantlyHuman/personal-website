@@ -13,29 +13,31 @@ repoUrl: https://github.com/HesitantlyHuman/autoclip
 ---
 
 ## Overview
-{/* TODO: Explain who this project is for, provide some simple motivation */}
-AutoClip is a python library which provides gradient clipping regularizers for PyTorch and TensorFlow. It improves stability during learning, training speed, and final test-set performance.
+AutoClip is a Python library that I built for machine learning engineers and trainers of models, like myself. It provides adaptive gradient clipping regularizers for PyTorch and TensorFlow, which can training stability, training speed, and final test-set performance of the trained models.
 
-It is based on a 2020 paper from [Seetharaman et al](https://arxiv.org/abs/2007.14469), and includes their original algorithm, along with a couple of alternatives and improvements.
+AutoClip is based on a 2020 paper from [Seetharaman et al.](https://arxiv.org/abs/2007.14469) by the same name, and includes their original algorithm, along with a couple of alternatives and improvements I added for my own use.
 
-## What is AutoClip?
+## Why clip gradients?
+Depending on the dynamics of the loss landscape (the space that you optimize over as you train) models can sometimes accumulate excessively large gradients. These "outlier" gradients may cause the model update to take too large a step, either slowing down training, or destabilizing convergence entirely.
 
-### Why clip gradients?
+While designing a training regimen, we often find ourselves balancing stability, speed and generalization. Set the learning rate too low, and training can become slow, or generalize poorly. Set the learning rate too high, and then your model might not converge at all, as it bounces chaotically around the loss surface.
 
-### How AutoClip works
+Clipping the gradients (scaling them down when they get "too big"), avoids taking steps that are too large, essentially acting as a "limiter" for the unfortunate combination of a high learning rate and a bad batch.
+
+## How AutoClip works
+AutoClip, as the name implies, automates the process of setting the clipping threshold for regularizing your gradients. Instead of adding another parameter to tune, AutoClip dynamically adjusts the clipping threshold based on past gradient history, so that it can detect when gradients are unusually large and address them.
 
 ## Motivation
 When I first read the [AutoClip paper](https://arxiv.org/abs/2007.14469), I was working on some BERT-based models I was training with PyTorch. I was trying to push training time as low as possible, and the models were showing some instability under the learning-rate schedules I was using.
 
-Naturally, I wanted to try this solution, but the original implementation from the paper was for TensorFlow. Worse yet, it didn't implement checkpointing and some other features I absolutely _**needed**_.
+Naturally, I wanted to try this new solution that I had found, but the original implementation from the paper was for TensorFlow. Worse yet, it didn't implement checkpointing and some other features I absolutely _**needed**_. 
 
-To solve my problem, I implemented and published my own library which took the paper and expanded on it on PyPI. The results for my particular application were astounding: I was able to speed up the training time by roughly 30%, while improving final test-set metrics.
-{/* TODO: Where should I put this result? Add more of an obvious caveat to this result */}
+If I wanted to use AutoClip, I had to implement it for myself. I implemented and published my own library on PyPI, which took the paper and expanded on it.
 
 ## Design Choices
-I designed `autoclip` as an easy, drop-in addon to any training loop. Often, machine learning engineers do not have the luxury of owning the training loop, or the training loop is already complicated, and it isn't worth risking any changes to it.
+I designed `autoclip` as an easy, drop-in add-on to any training loop. Often, machine learning engineers do not have the luxury of owning the training loop, or the training loop is already complicated, and it isn't worth risking any changes to it.
 
-By creating an easy `pytorch.Optimizer` wrapper, `autoclip` can be added outside of the training loop, with just 2 lines of code:
+By creating an easy `torch.optim.Optimizer` wrapper, `autoclip` can be added outside of the training loop with just two lines of code:
 
 ```python caption="Wrapping a PyTorch Optimizer" {11-15}
 import torch
@@ -56,12 +58,42 @@ optimizer = QuantileClip.as_optimizer(
 ...
 ```
 
-{/* TODO: Explain why checkpointing matters */}
+## Additional Features
+In addition to designing AutoClip with developer ergonomics in mind, I also added support for local and global clipping modes, configurable history length, percentile-based thresholds, and PyTorch-style checkpointing through `state_dict()` and `load_state_dict()`.
 
-I also added support for local and global clipping modes, configurable history length, percentile-based thresholds, and PyTorch-style checkpointing through `state_dict()` and `load_state_dict()`.
+### Local and Global Clipping
+While the original TensorFlow implementation from the paper only supported global clipping of the gradients, AutoClip supports two modes: Local and global clipping. Global clipping is identical to the original implementation, but local clipping keeps a separate gradient history for each parameter in the model, allowing them to have independent clipping thresholds. For models with uneven gradients or complicated geometry, this can be especially useful.
 
----
+### Standard and Quantile Clipping
+AutoClip supports two methods for setting the clipping threshold. `StandardClip` is the method used by the paper, and sets the gradient threshold at a particular z-score above the measured mean. `QuantileClip` instead sets the gradient threshold at a particular percentile of the existing history.
 
-This project is an example of the kind of ML tooling I like building: take a useful research idea, understand the constraints around how people actually train models, and turn it into a clean abstraction that is easy to use correctly (And maybe make some improvements along the way).
+### Checkpointing
+One of the most important features which I added to AutoClip was checkpointing support. For those unfamiliar, checkpointing is the process of saving the current training state during training. We do this for two main reasons: first, so that if training encounters an unexpected error, we can restart from where we left off; and second, so that we have a history of the training state that we can use later to generate graphs or run other tests.
 
-Head over to the repository if you want to check it out!
+There is nothing more annoying than starting an eight-hour training script, only for it to encounter a typo in your code four hours in. If you have regular checkpointing, then you only lose 2–10 minutes of training time, rather than those 4 hours.
+
+This mattered because AutoClip is stateful. The clipping threshold depends on the history of previous gradient norms, so resuming training without restoring that history would subtly change the behavior of the training run.
+
+AutoClip gets checkpointed right along with the optimizer it wraps, so if you are adding AutoClip to a training loop that already uses checkpointing, no extra work is needed.
+
+```python caption="Checkpointing example"
+...
+optimizer = QuantileClip.as_optimizer(optimizer=optimizer)
+torch.save(optimizer.state_dict(), 'optimizer.pth')
+
+# Then later
+optimizer = QuantileClip.as_optimizer(optimizer=optimizer)
+optimizer.load_state_dict(torch.load('optimizer.pth'))
+```
+
+## Results
+The results for my particular application were astounding: I was able to speed up the training time by roughly 30%, while improving final test-set metrics.
+
+Obviously this should come with the caveat that these results were specific to the task that I was using AutoClip for, but I was still very pleased by the result. I was able to achieve this because AutoClip let me push my learning rate very aggressively, leading to improved generalization of the resulting model.
+
+## Conclusion
+If you are interested in seeing how AutoClip works for you, want to test it out on your own models, or are just curious, head over to [the repository](https://github.com/HesitantlyHuman/autoclip) to check it out! The package is available on PyPI, so it's easy to add into your existing training loop and evaluate for yourself.
+
+This project is an example of the kind of ML tooling I like building: take a useful research idea, understand the constraints around how people actually train models, and turn it into a clean abstraction that is easy to use correctly (and maybe make some improvements along the way).
+
+*(If you enjoyed this project, consider sticking around and checking out some of the other things that I have been working on!)*
