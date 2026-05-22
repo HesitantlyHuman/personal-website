@@ -96,7 +96,7 @@ To generate those images, Puppeteer is doing something much heavier than just "m
 Reusing the same browser instance across multiple Open Graph images helps, but every image still requires loading the page, waiting for it to render, and then waiting to capture a screenshot. Depending on how many pages you need to support, that can get a little long, and I felt like I needed a bit more quality DX (Developer Experience) in my life.
 
 ## Option 2: Satori and Sharp
-Determined to find a simpler approach, I kept searching. As I continued poking around, I found [this blog post](https://arne.me/blog/static-og-images-in-astro) by Arne Bahlo. Instead rendering a page with Chrome and taking a screenshot, Arne uses an HTML and CSS to SVG rendering library called [Satori](https://github.com/vercel/satori).
+Determined to find a simpler approach, I kept searching. As I continued poking around, I found [this blog post](https://arne.me/blog/static-og-images-in-astro) by Arne Bahlo. Instead of rendering a page with Chrome and taking a screenshot, Arne uses an HTML and CSS to SVG rendering library called [Satori](https://github.com/vercel/satori).
 
 Once we can get our Open Graph image as an SVG, all that is left is to render it as a `.png` file. For that, I'll be using `sharp`. Arne used `sharp` as well, and I figure don't fix what ain't broke, right?
 
