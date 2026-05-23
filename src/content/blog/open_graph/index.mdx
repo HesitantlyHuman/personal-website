@@ -36,7 +36,7 @@ Implementers of the protocol get the information they need by reading `meta` tag
 
 That looks something like this:
 
-```html
+```html caption="Example of Open Graph meta tags"
 <meta property="og:title" content="My Page Title" />
 <meta property="og:description" content="A description of the page." />
 ```
@@ -136,13 +136,12 @@ The static pages can be listed directly. Since I already have their metadata def
 
 To keep static pages and content pages using the same generation code, I defined a small shared type. Remember that most of the Open Graph layout does not change from page to page, so each generated image only needs three things: where it should be written, what title to render, and what summary to render.
 
-```ts
+```ts link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L18-L57 lines=18-22,31
 type OgPage = {
     outputPath: string;
     title: string;
     summary: string;
 };
-
 const staticPages: OgPage[] = [
     {
         outputPath: "public/og/index.png",
@@ -165,7 +164,7 @@ const staticPages: OgPage[] = [
 ### Step 1: Load the Assets
 Next, the script loads the assets that Satori needs. The background template is stored in `src/assets`, not `public`, because I only want to serve the final generated images, not the raw template.
 
-```ts
+```ts link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L287-L291 lines=59-65,287
 async function readAsset(relativePath: string): Promise<Buffer> {
     return fs.readFile(path.join(root, relativePath));
 }
@@ -173,7 +172,6 @@ async function readAsset(relativePath: string): Promise<Buffer> {
 function toDataUrl(buffer: Buffer, mimeType: string): string {
     return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
-
 const regularFont = await readAsset("public/fonts/atkinson-regular.woff");
 const boldFont = await readAsset("public/fonts/atkinson-bold.woff");
 
@@ -186,7 +184,7 @@ Satori can render images, but it needs access to them while generating the SVG. 
 ### Step 2: Read Post Metadata
 For blog and project posts, I read the frontmatter directly from the `.md` and `.mdx` files. Astro already has this information during the normal build, but since this script is intentionally standalone, we need to collect the metadata ourselves.
 
-```ts
+```ts link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L108-L143
 async function readCollection(collection: CollectionName): Promise<ContentEntry[]> {
     const collectionDir = path.join(root, "src", "content", collection);
     const entries: ContentEntry[] = [];
@@ -220,7 +218,7 @@ It is important that the generated image slug matches the eventual page slug. If
 ### Step 3: Render SVGs
 The actual Satori call looks a lot like writing a small React component. In my case, the component has one full-size background image and one absolutely positioned text block, containing both the title and description of the page.
 
-```tsx
+```tsx link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L178-L255
 const svg = await satori(
     <div
         style={{
@@ -298,14 +296,14 @@ We are not asking Satori to recreate an entire website here. We are asking it to
 ### Step 4: Convert to PNGs
 Satori gives us an SVG string, but Open Graph consumers expect a URL to a "normal" image file, like a `.png` or `.jpg`. To get our final image, after rendering the SVG, I pass it through `sharp` and convert it to a `.png`.
 
-```ts
+```ts link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L257
 return sharp(Buffer.from(svg)).png().toBuffer();
 ```
 
 ### Step 5: Write the Results
 Finally, the script combines the static pages with the generated content pages, clears the old output directory, and writes a fresh set of images.
 
-```ts
+```ts link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/scripts/generate-og-images.tsx#L293-L318
 const contentEntries = [
     ...(await readCollection("blog")),
     ...(await readCollection("projects")),
@@ -340,7 +338,7 @@ At the end of this process, every page has a stable image path. Static pages get
 Generating the images is only half the job. The other half is making sure every page points to the correct image in its metadata. Luckily, this is the easy part. Your mileage may vary, depending on how your Astro project is configured, but for this site, all I needed to do was pass some props to the `PageLayout` component.
 
 For static pages, I can use explicit image paths:
-```astro
+```astro link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/src/pages/projects/index.astro#L22-L26
 <PageLayout
   title={PROJECTS.TITLE}
   description={PROJECTS.DESCRIPTION}
@@ -349,7 +347,7 @@ For static pages, I can use explicit image paths:
 ```
 
 And for article pages, the image path is derived from the collection and slug:
-```astro
+```astro link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/src/pages/projects/%5B...slug%5D.astro#L22-L32
 <PageLayout
   filePath={project.filePath}
   title={title}
@@ -364,7 +362,7 @@ And for article pages, the image path is derived from the collection and slug:
 ```
 
 The layout then passes that information to the component responsible for the actual metadata tags (`BaseHead.astro`, in my case), and we are officially in business:
-```astro
+```astro link=https://github.com/HesitantlyHuman/personal-website/blob/f37be61af901b61a59ee1ee623d2ef90bf7aad86/src/components/BaseHead.astro#L131-L132
 <meta property="og:image" content={imageURL} />
 <meta property="og:image:alt" content={`${title}: ${description}`} />
 ```

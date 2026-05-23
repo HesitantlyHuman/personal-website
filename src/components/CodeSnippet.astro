@@ -26,11 +26,43 @@ if (meta_string) {
   }
 }
 
+type LineRange = {
+  start: number;
+  end: number | null;
+};
+
+function parseLines(value: string | undefined): LineRange[] {
+  if (!value) {
+    return [{ start: 1, end: null }];
+  }
+
+  return value.split(",").map((part) => {
+    const trimmed = part.trim();
+
+    const rangeMatch = trimmed.match(/^(\d+)-(\d+)$/);
+    if (rangeMatch) {
+      const start = Number(rangeMatch[1]);
+      const end = Number(rangeMatch[2]);
+
+      if (end < start) {
+        throw new Error(`Invalid code snippet line range: ${trimmed}`);
+      }
+
+      return { start, end };
+    }
+
+    const startMatch = trimmed.match(/^(\d+)$/);
+    if (startMatch) {
+      return { start: Number(startMatch[1]), end: null };
+    }
+
+    throw new Error(`Invalid code snippet lines value: ${trimmed}`);
+  });
+}
+
 var caption = meta.caption;
 const link = meta.link;
-var lines_start = !isNaN(Number(meta?.lines_start))
-  ? Number(meta.lines_start) - 1
-  : meta?.lines_start;
+var lines = parseLines(meta.lines);
 
 // Check if the link is a GitHub snippet/permalink
 if (link && typeof link === "string") {
@@ -39,20 +71,17 @@ if (link && typeof link === "string") {
   const match = link.match(githubSnippetRegex);
   if (match) {
     const fileNameFromLink = match[1];
-    const startLineFromLink = Number(match[2]) - 1;
+    const startLineFromLink = Number(match[2]);
+    const endLineFromLink = match[4] ? Number(match[4]) : null;
 
     // If caption not set, use filename
     if (!caption) {
       caption = fileNameFromLink;
     }
 
-    // If lines_start not set, use start line
-    if (
-      lines_start === undefined ||
-      lines_start === null ||
-      lines_start === ""
-    ) {
-      lines_start = startLineFromLink;
+    // If lines not set, use GitHub line range
+    if (meta.lines === undefined || meta.lines === null || meta.lines === "") {
+      lines = [{ start: startLineFromLink, end: null }];
     }
   }
 }
@@ -77,6 +106,103 @@ const code_text = JSON.parse(code_encoded);
 
 // Now, determine if we need the figure header or not
 const header = copy || caption || link;
+
+const code_html = await Astro.slots.render("default");
+
+function rangeLength(range: LineRange): number | null {
+  if (range.end === null) return null;
+  return range.end - range.start + 1;
+}
+
+function splitIntoLineChunks(html: string): string[] {
+  const lineStartRegex = /<span class="[^"]*\bline\b[^"]*"/g;
+  const starts = [...html.matchAll(lineStartRegex)].map(
+    (match) => match.index!,
+  );
+
+  if (starts.length === 0) {
+    return [];
+  }
+
+  return starts.map((start, index) => {
+    const end = starts[index + 1] ?? html.length;
+    return html.slice(start, end);
+  });
+}
+
+function wrapLineRanges(codeInnerHtml: string, ranges: LineRange[]): string {
+  const firstLineMatch = codeInnerHtml.match(
+    /<span class="[^"]*\bline\b[^"]*"/,
+  );
+
+  if (!firstLineMatch || firstLineMatch.index === undefined) {
+    return codeInnerHtml;
+  }
+
+  const prefix = codeInnerHtml.slice(0, firstLineMatch.index);
+  const lineHtml = codeInnerHtml.slice(firstLineMatch.index);
+  const lineChunks = splitIntoLineChunks(lineHtml);
+
+  let lineIndex = 0;
+  let output = prefix;
+
+  let previousRangeEnd: number | null = null;
+
+  for (const range of ranges) {
+    const length = rangeLength(range);
+    const count = length ?? lineChunks.length - lineIndex;
+
+    if (count <= 0) {
+      throw new Error(
+        `Invalid empty code snippet line range: ${range.start}-${range.end}`,
+      );
+    }
+
+    if (previousRangeEnd !== null && range.start > previousRangeEnd + 1) {
+      output += `<span class="line-skip" aria-hidden="true"></span>`;
+    }
+
+    const group = lineChunks.slice(lineIndex, lineIndex + count);
+
+    if (group.length !== count) {
+      throw new Error(
+        `Code snippet lines="${meta.lines}" expects more rendered lines than were found.`,
+      );
+    }
+
+    output += `<span class="line-range" style="counter-reset: step ${range.start - 1}">`;
+    output += group.join("");
+    output += `</span>`;
+
+    previousRangeEnd = range.end ?? range.start + count - 1;
+    lineIndex += count;
+  }
+
+  if (lineIndex !== lineChunks.length) {
+    throw new Error(
+      `Code snippet lines="${meta.lines}" does not account for all rendered lines.`,
+    );
+  }
+
+  return output;
+}
+
+function applyLineRanges(html: string, ranges: LineRange[]): string {
+  const codeMatch = html.match(/(<code\b[^>]*>)([\s\S]*)(<\/code>)/);
+
+  if (!codeMatch) {
+    return wrapLineRanges(html, ranges);
+  }
+
+  const [, openingCodeTag, codeInnerHtml, closingCodeTag] = codeMatch;
+
+  return html.replace(
+    codeMatch[0],
+    `${openingCodeTag}${wrapLineRanges(codeInnerHtml, ranges)}${closingCodeTag}`,
+  );
+}
+
+const numbered_code_html = applyLineRanges(code_html, lines);
 ---
 
 <figure
@@ -151,10 +277,10 @@ const header = copy || caption || link;
       </figcaption>
     )
   }
-  <pre {...props}><slot /></pre>
+  <pre {...props} set:html={numbered_code_html} />
 </figure>
 
-<style define:vars={{ counter_start: lines_start }}>
+<style>
   .copy-button {
     pointer-events: auto;
   }
@@ -189,19 +315,15 @@ const header = copy || caption || link;
   }
 
   :global(.astro-code code) {
-    /* Define a counter for each <code> inside .astro-code */
-    counter-reset: step;
-    /* Start from zero, increment the counter */
-    counter-increment: step var(--counter_start);
-
     width: fit-content;
     min-width: 100%;
     display: block;
   }
 
-  /* :global(.astro-code code > :last-child) {
-    display: none !important;
-  } */
+  :global(.astro-code code .line-range) {
+    display: block;
+    width: 100%;
+  }
 
   :global(.astro-code code .line) {
     display: inline-block;
@@ -216,6 +338,28 @@ const header = copy || caption || link;
     text-align: right;
 
     /* Fix element position during horizontal scroll */
+    position: sticky;
+    left: 0;
+    z-index: 1;
+
+    pointer-events: none;
+
+    @apply bg-neutral-50 dark:bg-neutral-950 text-black/25 dark:text-white/25 px-4 w-12;
+  }
+
+  :global(.astro-code code .line-skip) {
+    display: inline-block;
+    width: 100%;
+    height: 1.25rem;
+    line-height: 1.25rem;
+    padding-right: 1rem;
+  }
+
+  :global(.astro-code code .line-skip::before) {
+    content: "…";
+    display: inline-block;
+    text-align: center;
+
     position: sticky;
     left: 0;
     z-index: 1;
