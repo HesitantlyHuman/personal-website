@@ -1,0 +1,25 @@
+---
+type Props = {
+    mt?: string;
+    mb?: string;
+};
+
+const { mt = "-1.25rem", mb = "1.25rem" } = Astro.props;
+---
+
+<div
+    class="qed"
+    style={`margin-top: ${mt}; margin-bottom: ${mb};`}
+    aria-label="End of proof"
+>
+    □
+</div>
+
+<style>
+    .qed {
+        display: flex;
+        justify-content: flex-end;
+        color: inherit;
+        line-height: 1;
+    }
+</style>

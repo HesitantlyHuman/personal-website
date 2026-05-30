@@ -1,0 +1,150 @@
+---
+title: "Sampling Random Matrices under Fixed-Margins — Part 3/3"
+summary: "Exploring random walks as a uniform approach to fixed-margin sampling, and why theory and practice don't always agree."
+date: "May 28 2026"
+draft: true
+tags:
+- Matrices
+- Probability
+- Algorithms
+- Markov Chains
+nav_depth: 2
+---
+
+{/* TODO: Add a note at the top which tells people that this is the 3rd post in a series and links to the first. */}
+
+### Mass Mixing
+{/* TODO: Explain */}
+
+{/* I tried improving the algorithm by adding a check to stop immediately if we had a dead row or column, but it was 50% slower. The extra branching added to every submatrix mix application just to stop early for some of them didn't end up being worth it.
+
+What did end up being worth it was checking to see if the lower and upper bound equaled eachother, because then that means that they are both 0, and we can return early.*/}
+
+{/* 
+
+# Because it can get trapped sampling 2x2 submatrices which are locally fixed (cannot be adjusted), this current iteration has a sampling bias toward solutions with zeros.
+
+# Actually this is not true: If we view this as a markov process over the graph of possible states connected by these 2x2 moves, then the output distribution of this sampling algorithm will approach the invariant measure of that markov process, as the number of steps between samples goes to infinity.
+
+# So what is that invariant measure? First, this is a finite space, and second, the transition matrix is symmetric. (Selecting a degree of "movement" is uniform, and then selection along that line is uniform. So edge states (concentrated mass) are more difficult to get out of, but they are also more difficult to get in to)
+
+# Since both of those are the case, then the invariant measure is the uniform distribution over states, and this method is actually unbiased.
+
+# The only question then is: How much mixing is enough mixing? */}
+
+{/* At what number of mixing steps did we reach 95% of the best final loss?
+---------------
+3x3 - 9 mixing steps
+4x4 - 15 mixing steps
+5x5 - 20 mixing steps
+
+It doesn't make sense for this to be scaling with mass, so it appears to be scaling with the number of entries in the matrix.
+
+At what number of initialization steps did we reach 95% of the best final loss?
+---------------
+3x3 - 9 mixing steps
+4x4 - 25 mixing steps
+5x5 - 100 mixing steps
+
+Not sure what this is scaling with, because it appears to be growing faster than the size of the matrix (in num entries) */}
+
+{/* > Running these experiments takes a long fucking time. If you want the results, just shoot me an email and I can send over the files.
+
+---
+
+The mixing works by stumbling (random walking) around the space of valid solutions. But how do we get a valid solution to start with? Since we are going to be mixing it up, we don't really care about it being good, but we do care about it being fast.
+
+To do so, we can use a simplified version of the progressive stars and bars algorithm. First, select the smallest row or column (by current unassigned margin mass), then select the largest row or column (depending), and place the entire mass of the small row or column in the relevant entry.
+
+Actually, wouldn't it be faster if we put it into the smallest? The amount we are assigning wouldn't change in either case, but then we only have to store the smallest for each. Furthermore, there may be scenarios where placing that mass solves both (if they are equal). Then we don't even need to branch, because we are just selecting one index anyways.
+
+The other method that we can try is the greedy method. Simply iterate over all of the entries and place the maximum value that we can in that entry.
+
+TODO: Test this.
+
+As for which of these sampling methods is the best for generating worlds for MCTS? Hard to say. Ideally that would be something you test by training a model with each sampling method, and then playing them against each other, but that is outside of the scope of this post. */}
+
+{/* Then tried to run some new experiments with 18x18. These experiments took even longer. I did them by comparing to a reference distribution (because we can't enumerate) which was also the max mix value (or max initialization steps value)*/}
+
+
+{/* I need to wrap this up. I can leave some of this as "future work", but I need to set some values now. Let's go with the hypothesis that these mixing values depend on sparsity. I am guessing that what matters for mixing is the number of "successful" steps (i.e. the number of steps that are not constrained). To set the mixing step values, then, I should estimate this factor, based on the total mass. A naive way would be to calculate the likelihood that any row or column selected (from the 4) would have a mass of 0 or 1. However, with that approach we don't account for times that we select a row which has high mass (say 8), but then don't select columns which contain that mass. How could I get a better estimate than the naive way? */}
+
+{/* The movability constraint is
+
+[a b]
+[c d]
+
+(a > 0 and d > 0) or (b > 0 and c > 0)
+
+So the question is: what is the likelihood that this statement is true, across all choices of rows and columns in the matrix?
+
+We can represent the expected mass in each cell as
+
+= row_margin * col_margin / total_mass
+
+Notice that this means the expected value of each row and col are equal to their margins, which we like.
+
+The way we can represent the PMF of each cell in the matrix is with a Hypergeometric Distribution. (Link to Wikipedia). For our case, we actually only care about the case where x=0, because all of our entries are non-negative, so our P(x=0) simplifies.
+
+Num successes (k) = 0 (we will be taking 1 - our result)
+Population size (N) = T (total mass)
+Number of draws (n) = row value
+Number of successes in population (K) = col value
+
+= \frac{{ K \choose k } { N - K \choose n - k }}{{ N \choose n }}
+= \frac{{ T - col \choose row }}{{ T \choose row }}
+= \frac{(T - col)!(T - row)!}{T! (T - col - row)!}
+
+One thing to notice here is that the resulting P(x=0) is symmetric. It doesn't matter if we swap the columns and rows. This should be the case, if our math is correct, because permuting the matrix shouldn't change its inherent sparsity.
+
+To calculate the sparsity of the mixing for a given set of constraints, we can then calculate this P value for each cell, and then iterate over all of the possible 2x2 subs, averaging
+
+P(can move) = 1 - (1 - a * d) * (1 - b * c) = bc + ad - abcd
+
+---
+
+To use this value, we would divide the base number of mixes (NxM) by the sparsity (1 - E[can move]). Then, we ensure that even with very sparse matrices, we still do an appropriate number of mixing steps to get approximately uniform outputs.
+
+So let's run it
+SHOW OUTPUTS WHERE IT IS 50000% SLOWER
+
+Adding in sparsity has made our mixing approach crazy slow.
+
+But how sparse are the matrices that we are working with? Consider the following example:
+
+EXAMPLE OF REAL GAME SCENARIO, and then calculate sparsity
+
+- Talk about how that makes sense
+
+---
+
+So what can we do about it? If we avoid sampling 2x2 submatrices that cannot move, then we don't have to use the sparsity factor at all. So let's do that.
+
+The way that we can sample a valid 2x2 matrix is by just finding 2 positive cells that do not share a row or column. The submatrix implied by these cells must be "moveable" because these cells form the diagonal.
+
+So, we keep a list of the positive cells, and we sample from that list. Then we sample from only the valid cells (don't share).
+
+After, we do a normal mixing step (sample the line). Then, we update our positive cells.
+
+---
+
+well, looks like even with some improvements to the algorithm, the mass mixing approach is much slower
+
+and to add insult to injury, when we switch to sampling only the submatrices with positive diagonals, we lose the symmetry in the transition matrix that gave us uniformity in the first place
+
+SHOW THE SLIGHT IMPROVEMENT
+
+So this "improved" version of mass mixing, while almost 6x as fast as the sparsity rejection sampling approach, is no longer uniform
+and still much slower than our other non-uniform approaches
+*/}
+
+
+### The final plan
+{/* For now, I will be using the progressive stars and bars approach.
+
+
+Why? 
+1. It is fast (comparable to the card shuffling)
+2. The mass concentration bias matches what I expect to happen as players play the game. Because this is a ladder shedding game, players will tend to play all of their cards of one rank at a time, rather than spreading things out.
+
+*/}

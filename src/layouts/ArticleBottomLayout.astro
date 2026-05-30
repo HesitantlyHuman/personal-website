@@ -175,4 +175,14 @@ const next = items[(index + 1) % items.length];
   :global(#main-article .markdown-alert-title) {
     margin-block: 0.5rem;
   }
+
+  :global(.katex-display) {
+    --scrollbar-gap: 0.5rem;
+
+    overflow-x: auto;
+    overflow-y: visible;
+
+    padding-block: var(--scrollbar-gap);
+    margin-block: calc(1.25em - var(--scrollbar-gap));
+  }
 </style>
