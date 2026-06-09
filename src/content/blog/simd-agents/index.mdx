@@ -1,0 +1,39 @@
+---
+title: "Realtime Learning of Thousands of Simulated Agents"
+summary: "Using SIMD and ECS to run thousands of micro recurrent networks learning their environment with reinforcement learning."
+date: "Jun 6 2026"
+draft: true
+tags:
+- SIMD
+- Reinforcement Learning
+- Reccurent Networks
+- Neural Networks
+- Machine Learning
+nav_depth: 2
+---
+{/* TODO: Improve title and summary */}
+
+{/* The concept is this: How can we simulate thousands of agents that are able to learn in realtime. What I mean by realtime is that we update quickly enough that it could be used in a game. We will be targeting 60FPS, so the total frame time is 16.667ms per frame. Since AI is not going to be the most expensive part of most games I need to ensure that I am not using more than 3-5ms per frame.
+
+I want to figure out a way to use SIMD with an ECS approach to blast through a bunch of tiny recurrent network updates maybe 10-20 times per second. (Talk about how the decision-making speed of biological agents--like us--isn't actually that fast, so this speed is more that sufficient if the decisions are high level actions which are then executed by some sort of "agent controller").
+
+Since we will be running at 60 frames per second, I can spread out the agent updates into batches, so that we only do some of them each frame. (Maybe I could even do dynamic agent resolution? But that may be harder on the learning process for the recurrent network, so I should hold off on that.)
+
+The initial plan is just to have each agent be fully independent in state, but sharing the same policy, so that they can all learn in concert (online--fuck I hate that term). Each time we go to do a learning update, we would take the summed reward from the different agents and use that to update the policy network. (Then probably quantize the network back to prepare for the SIMD inference stage)
+
+My goal is to have 10k agents (which is a bit ambitious I know, especially since I haven't done any testing for the feasibility of this option).
+
+If I am having trouble running that many agents, I also have a new plan. The new plan is that I can create a sort of "decision mesh" where I do not evaluate the policy for every agent each "thinking frame". Instead, I would sample some K points in the mesh (likely right on top of an agent), and run the policy. Then I would linearly interpolate the policy outputs across the local area. That way I am technically running way less agents, I am just proliferating them as a sort of swarm.
+
+The idea would be to start by doing a proof of concept of this with a grid mesh, but then implement a particle system. Each sampler would be a particle that is trying to move to sample where the decision field gradient is high, but to stay away from the other particles. That way we have a sampling distribution that can adapt to the changing needs of the swarm, and kind of follow along with it. Otherwise we may spend time and compute calculating information that no agent even uses.
+
+The main issue with the lerp approach is that it makes it difficult to have per-agent statefulness. If we have two agents with very different recurrent state who are right next to each other, how do we interpolate between them. What if the agents between them have a third, different state?
+
+In that case, we have to figure out how we can include the state with this optimization.
+
+For now, however, we will just be seeing how many independent agents we can get running.
+*/}
+
+---
+
+## Introduction

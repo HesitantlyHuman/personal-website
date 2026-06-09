@@ -1,7 +1,7 @@
 ---
 title: "Sampling Random Matrices under Fixed-Margins — Part 2/3"
 summary: "Diving deeper into alternative sampling approaches, and why sampling fixed-margin matrices uniformly is a hard problem."
-date: "May 28 2026"
+date: "May 30 2026"
 draft: true
 tags:
 - Matrices
@@ -11,66 +11,136 @@ tags:
 nav_depth: 2
 ---
 
-{/* TODO: Add a note at the top which tells people that this is the 2nd post in a series and links to the first. */}
+This article is part of a series! If you haven't read the first article in this series, consider heading [over there](/blog/fixed-margins-01) right now and coming back when you are done.
 
-### Index Sampling
-{/* TODO: explain the idea */}
+## So what now?
+In the previous article, we discussed two methods for sampling solutions to fixed-margin problems: Card-dealing and Greedy Stars-and-Bars.
 
-{/* 
-Notes:
-First, I needed a way to systematically generate all possible worlds from a given set of margins.
-After playing around with a pen and paper, I realized that somtimes all solutions to a particular row or column would result in valid world solutions. In particular, this was true when I chose the most constrained row or column to solve.
-EXPLAIN WHY THIS IS THE CASE
-Using this, I quickly wrote up some python code and found that for small matrices (3x3, 4x4) it was actually fairly simple to enumerate all of the possiblities.
-SHOW SOME EXAMPLES, SOLUTIONS, and COUNTS
-However, then I tried input margins that were more... realistic. I tried sampling for a test scenario of SCUM (full deck of cards), and even counting all of the options quickly became impossible.
+While both of these methods are quite fast, and will always generate a valid solution, neither of them sample from all possible worlds uniformly.
 
+In this post, we will explore some more... _"**out there**"_ ideas in our search for a uniform sampling method. Mainly, we will explore which sampling these solutions uniformly is a lot harder than you would think.
+
+## Index Sampling: Insert funny subtitle here
+Maybe we don't need to do so much work sampling lots of different random numbers, and finding constraints or messing about with stars or bars.
+
+*All* we want is to pick one possible world from the set of all of the possible worlds, with equal likelihood. Maybe all we need to do, is pick one.
+
+For an approach like this to work, we would need two things:
+1. First, we would need to know how many solutions there are to the specific fixed-margin problem in question.
+2. Second, we would need a way of converting our selection (a sampled index) in to a possible world. That is, we need a bijective function that maps indices directly to solutions. Every index must be a solution, and every solution must have an index.
+
+I wasn't certain that either of those things would be very easy. Combinatorics is one of those things that is never as simple as you might think.
+
+![Insert some meme about counting being hard]()
+
+But because creating that magic bijective function looked even more difficult, I decided that I wanted to start somewhere else.
+
+### So, how many solutions are there?
+Before trying to figure out our million dollar function, I decided that we should play around with some simple test cases, and figure out how many solutions these fixed-margin problem things tend to have.
+
+For that, I needed a way to systematically generate all possible worlds for a given set of margins. I spent some time with pen and paper counting out possible worlds and discovered something interesting:
+
+Sometimes, but not always, every solution to a given row or column would be able to result in valid fixed-margin solutions. In particular, this was the case if-and-only-if the row or column in question had the most restrictive constraint in the problem.
+
+> [!NOTE]
+> Eagle-eyed readers among you may recognize this approach. In writing up these articles I may have chosen to "break" the timeline a bit. This discovery is what led me to develop what eventually became the Greed Stars-and-Bars algorithm.
+
+Using this realization, I quickly wrote up some python code that could enumerate all solutions to a given set of margins.
+
+```python link=https://github.com/HesitantlyHuman/monte-cardo/blob/79787a74ca8a3f23ed8f8ff3c0a69c23700e6baf/scripts/enumerate_worlds.py#L75-L198 lines=178-180,89-90,107-108,115-116,119-119,127-127,129-129,131-132,137-137,141-141,149-149,155-155,157-157,159-160,165-165,169-169
+def enumerate_states(
+    row_constraints: list[int], col_constraints: list[int]
+) -> Iterator[np.ndarray]:
+    remaining_row_mass = row_constraints - np.sum(state, axis=1)
+    remaining_col_mass = column_constraints - np.sum(state, axis=0)
+    row_candidate_idx = int(np.argmin(masked_row_constraints))
+    row_candidate_value = int(remaining_row_mass[row_candidate_idx])
+    col_candidate_idx = int(np.argmin(masked_col_constraints))
+    col_candidate_value = int(remaining_col_mass[col_candidate_idx])
+    if row_candidate_value < col_candidate_value:
+        open_col_idxs = np.flatnonzero(~cols_complete)
+        allocations = stars_and_bars(row_candidate_value, len(open_col_idxs))
+        for allocation in allocations:
+            next_state = state.copy()
+            next_state[row_idx, open_cols] = allocation
+            yield from enumerate_from_state(next_state, ...)
+    else:
+        open_rows = np.flatnonzero(~rows_complete)
+        allocations = stars_and_bars(col_candidate_value, len(open_row_idxs))
+        for allocation in allocations:
+            next_state = state.copy()
+            next_state[open_rows, col_idx] = allocation
+            yield from enumerate_from_state(next_state, ...)
 ```
-# Up to 15 players, with 18 ordinality slots
+
+With the code in hand, it was actually fairly simple to enumerate all of the possible solutions for some small fixed-margin problems.
+
+| Size          | Row Margins       | Column Margins    | Total Solutions |
+|---------------|-------------------|-------------------|-----------------|
+| $(2\times 2)$ | $(10, 18)$        | $(12, 16)$        | $11$            |
+| $(3\times 3)$ | $(3, 7, 2)$       | $(2, 5, 5)$       | $45$            |
+| $(4\times 4)$ | $(3, 6, 2, 3)$    | $(2, 5, 5, 2)$    | $1446$          |
+| $(5\times 5)$ | $(3, 4, 1, 3, 5)$ | $(2, 5, 5, 2, 2)$ | $49420$         |
+
+*If you are paying attention to that left-most column, you might be feeling a sense of foreboding.*
+
+The next thing that I tried was enumerating all of the possible states for something more... realistic to my use case.
+
+I created a test scenario of a group of 7 players playing scum (a full standard deck of cards). To make the scenario a bit easier, I also pretended that some plays had already been made.
+
+```python
+# Up to 7 players, with 18 ordinality slots
 player_constraints = [5, 4, 7, 6, 5, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0]
 card_counts = [2, 4, 2, 2, 4, 2, 4, 1, 1, 3, 4, 2, 3, 0, 0, 0, 0, 0]
 
-# Somone played 2 12s
-# Then someone else played 2 10s
-# Then someone played 2 7s
-# Then someone played 2 4s
-# Then someone played 1 11s
-# Then someone played 1 8s
-# Then someone played 1 7s
-# Then someone played 2 2s
+# Plays (cards that are removed)
+# 2 12s
+# 2 10s
+# 2 7s
+# 2 4s
+# 1 11s
+# 1 8s
+# 1 7s
+# 2 2s
 ```
 
-SHOW THE SCREENSHOT, TELL HOW BIG THE SPACE IS
-The other problem is that despite having this nice algorithm, I still didn't have any way to do my index sampling. If different choices for each stars and bars subproblem (make sure this is explained) lead to different numbers of final possible states, then this approach doesn't actually help me create a generating function.
-*/}
+While I would love to tell you the results for that particular experiment, I would love even more to know the results for that experiment. Here is what I woke up to after a night of leaving my poor laptop churning:
 
-### Progressive Stars-and-Bars
-{/*
-But I did have an idea: a question. I am assuming that the outputs of each of these branches are not balanced, but how unbalanced are they? What if I use my generating algorithm to create a sampling algorithm, by changing each of my row/column enumeration steps into sampling steps.
-The basic algorithm would work like this:
-EXPLAIN THE ALGORITHM
-*/}
+![Image of terminal output with progress bar at 0%, the time stamp shows 11hrs and the solutions count shows 2e8.](./enumeration_output.jpeg)
 
-{/*
-Example of unbalanced branches for the progressive stars-and-bars algorithm
+That script ran for 11 hours, and it didn't even finish counting all of the states reachable by the first option of the first row (actually the 13th, because there are a lot of over-constrained entries in this matrix). Safe to say that the number of possible solutions to these problems gets **big fast**.
 
-| 0 | 0 | 3 || 3
-| 0 | 0 | 0 || 4
-| 0 | 0 | 0 || 7
-|---|---|---||----
-| 4 | 5 | 5 || 14
+![Image of a nervous man sweating with the caption: "my computer when I open python"](./sweating_meme.jpg)
 
-Since we have already done the first row, the next operation in the algorithm is to assign mass to the right-most column. However, since the second and third rows have such different masses (4 and 7 respectively), assignments/branches that more mass to the second row (and therefore leave more mass to the third) will have many more final states. This is because the number of valid assignments for the stars-and-bars subproblem is not linear with respect to the amount of mass, it grows exponentially (maybe check this and have the right term)
-EQUATION FOR THE NUMBER OF OUTPUTS OF STARS AND BARS
+So we have a bit of a problem. See for the index sampling method to work, we need to be able to at least know how many possible worlds there are.
 
-But what direction is it biased? The algorithm will be biased towards the low-count branches. In otherwords, we will be biased towards solutions which concentrate mass (explain this)
+The other problem is that I would still need a good method for converting those indices (which we don't know how to get yet) into possible worlds. See the main problem is this: every branch--a partial solution to a particular problem--can have a different number of final solutions. We can't take any shortcuts in our counting, and it makes it difficult for us to map an index without re-counting through all of the possible worlds (which is not fast enough for our purposes, if you couldn't tell).
 
-We assume that as players play the game, they will naturally tend to eliminate entire classes of cards from their hands, so as the trick progresses, the game will bias towards those types of solutions as well.
+### Dynamic Programming
+Some of you Computer Science types might be screaming at your screens by now that this sounds like a problem for *\~dynamic programming\~*.
 
-However, at the start of the trick, this isn't a good representation of the possible worlds.
-*/}
+Dynamic programming would resolve our combinatorial woes somewhat because it allows us to only count a branch if we haven't seen it before. That way we can skip lots of branches if we arrive at the same partial solution from different directions.
 
-### Noise Scaling
+Unfortunately, dynamic programming trades memory for compute time. Just for kicks, I had ChatGPT generate a quick dynamic programming approach based on the existing enumeration code that I had, and gave it a run.
+
+It crashed.
+
+Immediately.
+
+The second I pressed enter, my laptop ran out of memory and froze. Not that we didn't expect a result like that, but it is unfortunate that we will have to look elsewhere if we want to get an algorithm that will sample possible worlds uniformly.
+
+## Noise Scaling
+So what's next in our quest for the uniform sampling algorithm?
+
+The next wild idea is that maybe we don't have to sample a valid solution, if we can just map our sample into the valid solution space. How would that work?
+
+First, we will sample a non-negative matrix such that each entry is a uniformly selected real value in the range $[0, 1)$. Then, we will scale the rows and the columns so that they sum to the target margins.
+
+The naive approach to this
+
+---
+
+{/* ### Noise Scaling */}
 {/* TODO: explain the idea */}
 
 {/* 
@@ -145,7 +215,7 @@ SHOW RESULTS
 Looks like that change does help but not enough. The larger test still has a failure ratio of almost 0.8. (Talk about how bad that would be with the rerolling approach)
 */}
 
-### Submatrix Sampling
+{/* ### Submatrix Sampling */}
 {/* 
 While working on this, I had a thought...
 # The full fixed-margin matrix is uniquely determined by the (N-1)x(M-1) submatrix.
@@ -173,7 +243,7 @@ SHOW RESULTS
 Unfortunately, the failure rate was quite high, and often depends one the exact nature of the margins, which is even more suboptimal.
 */}
 
-### Honorable Mention: DP Based True Uniform Sampling
+{/* ### Honorable Mention: DP Based True Uniform Sampling */}
 {/* TODO: explain */}
 
 {/* While this method is reasonably fast for small examples, it has the same flaws as the index method. You end up needing to count all of final states

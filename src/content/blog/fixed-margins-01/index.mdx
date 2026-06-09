@@ -2,6 +2,7 @@
 title: "Sampling Random Matrices under Fixed-Margins — Part 1/3"
 summary: "Introducing fixed-margin matrices as a formulation for sampling hidden card hands, then comparing naive sampling methods."
 date: "May 29 2026"
+updated: "Jun 8 2026"
 draft: false
 tags:
 - Matrices
@@ -13,20 +14,6 @@ nav_depth: 2
 ---
 
 import QED from "@components/QED.astro";
-
-{/* What do I need to achieve in this post?
-
-- [x] Hook the audience
-- [x] Explain what the problem is
-- [x] Explain why I care about the problem
-- [ ] Explain why the math is interesting / make some outside connections
-- [x] Introduce the mathematical formulation of the problem
-- [ ] Explain card dealing
-- [ ] Talk about the card dealing optimizations and performance
-- [ ] Talk about card dealing's bias
-- [ ] Talk about progressive stars and bars
-- [ ] Talk about psb's optimization and performance
-- [ ] Talk about psb's bias */}
 
 
 ## Introduction
@@ -40,7 +27,7 @@ Barring straight-up cheating, there *usually* isn't an easy way to know that inf
 {/* TODO: Attribution */}
 ![Meme of someone holding their cards the wrong way around with the text "When someone is explaining a new card game to you:"](./cards_wrong_way.png)
 
-But you can make some educated guesses about what they might have and--maybe even more usefully--you can know what they do *not* have.
+There are lots of possible ways that the cards could have been dealt. You know there are 3 Aces left, and you have none of them, but maybe player A has 1, and player B has 2, or maybe player B has all of them? Because of this, we can't know what every player has, but you can make some educated guesses about what they might have and--maybe even more usefully--you can know what they do *not* have.
 
 As part of my ongoing upgrades to `monte-cardo` (my Information Set Monte Carlo Tree Search solver for ladder shedding games, read more about that [here](TODO)) I found myself needing to ask the same question.
 
@@ -49,12 +36,20 @@ For more details, motivated readers should check out the appropriate blog and pr
 
 The algorithm relies on generating many different "hypotheses" for what hands the other players might have. Each of these hypothetical game states is what we call a "possible world", and we evaluate each of our available moves over a bunch of these possible worlds so that we can get a better idea of how good that move is.
 
-The problem that I am addressing in this blog post is the generation of those possible worlds. We want to do it quickly, and we want to generate a wide range of possible worlds (more on what that means in a bit).
+### What are we doing here?
+The problem that I am addressing in this blog post is the generation of those possible worlds. We want to do it quickly, and we want to generate a wide range of possible worlds (more on what that means in a bit). If every "possiblity" that we consider while figuring out what move is best for us to make is the exact same scenario (no variety in our possible worlds), then instead of figuring out a generally good move, we will instead optimize for this singular assumption we have made about who has what cards.
 
 But how do we create these possible worlds? For our purposes there is only one unknown factor in the game, and that is other players' hands. Luckily, a computer program is just about the best card counter out there, so we do know two things:
 
 1. We know exactly how many cards each player currently has. Every player gets to see the cards dealt, and the cards played from the hand are public knowledge.
 2. We know exactly how many of each rank of card are left. The deck that we are playing with is public knowledge, and--once again--the cards that players play are public knowledge.
+
+> [!NOTE]
+> While this post is motivated by a card game, this general shape shows up all over the place: you know some partial information about the world, and you want to reason about the hidden state that produced it.
+>
+> A similar problem that you can find in forensics, archeology and the medical industry is reconstructing an object from scan data. You might have a scanner that is recording attenuation of signals through an object, which gives you a bunch of 2D density measurements, and you want to figure out what 3D object could have produced them.
+>
+> The difference here is the goal. Reconstruction problems often want one good answer: the most likely object, the simplest object, the lowest-entropy object, etc. Here, I want the opposite: lots of possible worlds, so that the solver can make decisions that are robust across all the different ways the game might actually be.
 
 ### Formulation
 Let's be a bit more precise about our definitions.
@@ -73,9 +68,11 @@ $$
 \end{array}
 $$
 
-With this framework, the set of all possible worlds is exactly the set of integer matrices with non-negative entries which have these specific row and column sums. When I asked ChatGPT what this problem should be called, it gave me fun--but technically correct--answers like, "integer points in a transportation polytope" or "fiber of a contingency table".
+With this framework, the set of all possible worlds is exactly the set of integer matrices with non-negative entries which have these specific row and column sums. These sums are called the matrix's "margins".
 
-While I am going to leave these suggestions here for the entertainment of the reader--and maybe also the benefits of search engine optimization--I have elected to call this problem "sampling non-negative integer matrices with fixed-margins".
+When I asked ChatGPT what this problem should be called, it gave me terrible--but technically correct--answers like, "integer points in a transportation polytope" or "fiber of a contingency table".
+
+While I'll leave those suggestions there for the entertainment of the reader--and maybe also for SEO--I have elected to call this problem "sampling non-negative integer matrices with fixed-margins". A mouthfeel, but it pretty much describes what we are trying to do here.
 
 One thing to note is notion of "total mass". The sum of all entries in the matrix must equal the sum of the row margins, and the sum of the column margins. This is what I am calling the total mass of the problem, and it corresponds, in our case, to the number of cards remaining.
 
@@ -84,13 +81,13 @@ The second part of our formulation is defining what we mean by "wide range of po
 Instead, I am going to use a simplification. I will define "wide range" as sampling from the uniform distribution on the set of all possible worlds, and we will evaluate sampling methods by their uniformity, or lack thereof.
 
 ## The Simple Solution
-The natural starting point for solving this problem is simply dealing the cards, while respecting the constraints imposed by the margins. I'll call this algorithm the "card-dealing" approach.
+The natural starting point for solving this problem is simply dealing the cards, while respecting the constraints imposed by the margins. I'll call this algorithm the "card-dealing" approach. The cards are already dealt, but we will be sort of "simulating" the process of dealing out the cards.
 
-While the most naive version of this approach is to create a list of cards, and then shuffle and deal them, creating and shuffling a list is quite slow and unnecessary. We waste time shuffling items that are for our purposes identical.
+While the most naive version of this approach is to create a list of cards, and then shuffle and deal them, creating and shuffling a list is quite slow and unnecessary. We waste time shuffling items that are for our purposes identical. We don't care if Alice has an Ace of hearts or and Ace of diamonds, we just want to know how many Aces each player might have.
 
 Instead, the process will be something like this: The number of cards we have to deal corresponds to the total mass. Each step of the algorithm, we simply select a row and a column which have remaining unallocated mass, and then add one to the entry at that row and column. Then, we update the remaining unallocated mass for the row and column, so that we can skip selecting columns and rows who are already "full".
 
-{/* TODO: How much more do I need to explain here? Does it make sense? What is confusing? */}
+You can think of it like this: We have a cup full of beads. Those are our cards. Then we also have a grid of squares. If a square is full, then we can't put a bead on it. Each time we pick up a bead, we just randomly select one of the open squares.
 
 ### Implementation
 Because `monte-cardo` is written in Rust, all of the implementations and performance testing of the sampling algorithms in this post and the rest of this series will be done in Rust.
@@ -260,23 +257,233 @@ Somehow this new way of sampling has made our bias even worse! (For this specifi
 
 Unfortunately, adjusting the likelihoods of the various columns and rows does not eliminate the bias inherent to this approach.
 {/* TODO: I may need to say more about this. I suspect that the only way to set the probabilities of each column and row properly is to actually know the entire "tree" from your current position, which defeats the entire purpose of the card-dealing algo. I haven't put much thought yet into how to show this, however. */}
+{/* It may even be impossible to set the weights properly for certain matrices, because we need specific entry weights for this to be balanced, and by setting row and column weights we are requiring that the final weight matrix is a product, which may not always be the case. I tried to see if that was the case for our simple example matrix, because that would be convenient, but there are many weight configurations which will make the sampling for that problem uniform.
+
+| ? | ? | 2 r_0_w_0
+| ? | ? | 1 r_1_w_0
+  1   2
+  
+  
+Case A (top-left)
+Forces B
+
+Case B (top-right)
+| ? | 1 |
+| ? | ? |
+
+	top-right -> A
+	top-left -> B
+	bottom-left -> A
+	bottom-right -> B
+
+Case C (bottom-left)
+Forces A
+
+Case D (bottom-right)
+Forces B
+
+P(A) = P(1st-top-right)*(P(2nd-top-right) + P(2nd-bottom-left)) + P(1st-bottom-left)
+
+1/2 = (r0_w0 * c1_w0) * (r0_w1 * c1_w1 + r1_w1 * c0_w1) + r1_w0 * c0_w0
+=  (r0_w0 * c1_w0) * (r0_w1 * c1_w1 + (1 - r0_w1) * (1 - c1_w1)) + (1 - r0_w0) * (1 - c1_0)
+= (r0_w0 * c1_w0) * (r0_w1 * c1_w1 + (1 - c1_w1 - r0_w1 + r0_w1 * c1_w1)) + 1 - r0_w0 - c1_0 + r0_w0 * c1_0
+= (r0_w0 * c1_w0) * (1 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1) + 1 - r0_w0 - c1_0 + r0_w0 * c1_0
+= (r0_w0 * c1_w0) - (r0_w1 * r0_w0 * c1_w0) - (c1_w1 * r0_w0 * c1_w0) + (2 * r0_w1 * c1_w1 * r0_w0 * c1_w0) + 1 - r0_w0 - c1_0 + (r0_w0 * c1_0)
+= 1 + (r0_w0 * c1_w0)(2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1) - r0_w0 - c1_0
+
+-1/2 = (r0_w0 * c1_w0)(2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1) - r0_w0 - c1_0
+
+---
+suppose r0_w0 = c1_w0 = 1/2
+-1/2 = 1/4(2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1) - 1/2 - 1/2
+1/2 = 1/4(2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1)
+2 = 2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1
+
+2 * r0_w1 * c1_w1 - r0_w1 - c1_w1 = 0
+r0_w1 (2 * c1_w1 - c1_w1) = 0
+
+So either r0_w1 = 0, or 2 * c1_w1 - c1_w1 = 0
+
+2 * c1_w1 - c1_w1 = 0 => 2 * c1_w1 = c1_w1 => c1_w1 = 0
+
+This makes sense. If we are selecting the rows and columns uniformly for the first mass assignment, then we want Case B to force A.
+---
+
+Now suppose that r0_w1 = c1_w1 = 1/2
+If we have weights that are a function of the column or row mass, then once we have assigned one mass to the top-right, the selection probabilities for each row and column must be equal, and therefore 1/2.
+
+-1/2 = (r0_w0 * c1_w0)(2 - r0_w1 - c1_w1 + 2 * r0_w1 * c1_w1) - r0_w0 - c1_0
+-1/2 = (r0_w0 * c1_w0)(2 - 1/2 - 1/2 + 2 * 1/2 * 1/2) - r0_w0 - c1_0
+-1/2 = (r0_w0 * c1_w0)(3/2) - r0_w0 - c1_w0
+-1/2 = 3/2 * r0_w0 * c1_w0 - r0_w0 - c1_w0
+-1/2 = r0_w0 (3/2 * c1_w0 - c1_w0)
+-1/2 = r0_w0 (1/2 c1_w0)
+-c1_w0 = r0_w0
+
+The only solution to this for which c1_w0 and r0_w0 are still probabilities (i.e. \in [0, 1]) is c1_w0 = r0_w0 = 0. Thus, there is a way for us to have a function which maps the row and column masses to probabilities for a uniform sampling, provided that function picks the top right entry for our first mass selection with 100% certainty.
+
+I think that it may be possible to have a scenario where given one set of row and column constraints (say [1, 3], [1, 3]), we have this situation again (a forced pick), but that if we change only the row or only the column constraints (say [1, 3], [2, 2]), then we don't have a forced pick. If that is the case, then if we can show that the forced pick of the first set doesn't work for the second, then maybe we can show that there is no function. (Basically we need to show that the probability outputs for the margins that remained the same--in this case the rows--cannot be the same).
+
+Proposed example along with the possible solutions to each problem:
+| ? | ? | 1
+| ? | ? | 3
+  1   3
+  
+| 1 | 0 |
+| 0 | 3 |
+
+| 0 | 1 |
+| 1 | 2 |
+
+---
+
+| ? | ? | 2
+| ? | ? | 2
+  1   3
+  
+| 1 | 1 |
+| 0 | 2 |
+
+| 0 | 2 |
+| 1 | 1 |
+
+---
+
+| ? | ? | 1
+| ? | ? | 3
+  1   3
+
+A
+| 1 | 0 |
+| 0 | 3 |
+
+B
+| 0 | 1 |
+| 1 | 2 |
+
+TL -> A
+TR -> B
+BL -> B
+BR
+	| 0 | 0 |
+	| 0 | 1 |
+	
+	TL -> A
+	TR -> B
+	BL -> B
+	BR
+		| 0 | 0 |
+		| 0 | 2 |
+		
+		TL -> A
+		TR -> B
+		BL -> B
+		BR -> A
+
+---
+
+| ? | ? | 2
+| ? | ? | 2
+  1   3
+  
+A
+| 1 | 1 |
+| 0 | 2 |
+
+B
+| 0 | 2 |
+| 1 | 1 |
+
+TL -> A
+TR
+    | 0 | 1 |
+    | 0 | 0 |
+
+    TL -> A
+    TR -> B
+    BL -> B
+    BR
+        | 0 | 1 |
+        | 0 | 1 |
+
+        TL -> A
+        TR -> B
+        BL -> B
+        BR -> A
+BL -> B
+BR
+    | 0 | 0 |
+    | 0 | 1 |
+
+    TL -> A
+    TR
+        | 0 | 1 |
+        | 0 | 1 |
+
+        TL -> A
+        TR -> B
+        BL -> B
+        BR -> A
+    BL -> B
+    BR -> A
+
+Ok, so I can't use my previous trick as readily here, because we have 3 layers instead of 2. I can simplify the leaf nodes in the same way, but then we still have an intermediate node.
+
+
+TODO: Maybe see if I can construct an adversarial example which would show that it is impossible to set those values properly. The issue is that if I let each of the mass assignment step weights be independent, then there are too many variables, and it is too easy to balance. Maybe I could show that you actually can set the weights in a way that makes it uniform.*/}
 </details>
 
 ## Stars-and-Bars
-Before we move on to the next algorithm, let's take a look at a simpler problem, and the solution to that problem.
+Before we move on to the next algorithm, let's take a look at a simpler problem.
 
-The related problem is often formulated as balls in urns, or cookies to children, but the idea is the same. Distribute some fixed number of items into a fixed number of bins, uniformly.
+This related simpler problem is often formulated as balls in urns, or cookies to children, but the idea is the same: Distribute some fixed number of items into a fixed number of bins, uniformly.
 
 This is exactly the 1-dimensional case of our possible worlds problem. And luckily for us, there is a great algorithm for doing this uniformly.
 
-{/* TODO: finish explaining stars-and-bars */}
+That algorithm is called Stars-and-Bars. It works by reframing our problem of distributing items into a problem about generating strings. For example, let's take a scenario where we have 7 balls, and we want to distribute those balls into 5 urns. We will use star (`*`) characters for our balls, and bar (`|`) characters to represent the separations between the different urns.
+
+The following string corresponds to an assignment of 3 balls in the first urn, 0 in the second, 2 in the third, and 1 in both the fourth and fifth urns.
+
+```
+| * * * |  | * * | * | * |
+```
+
+When we are sampling distributions of these 7 balls into the 5 urns, the number of stars and bars will not change. We will always have 7 stars, and 5 + 2 bars. If we want to generate a new string (sample a new distribution), then all we need to do is determine the position of the bars.
+
+It works like this:
+
+1. First, place a bar at the beginning and the end of the string.
+
+    ```txt copy=false
+    0   1   2   3   4   5   6   7
+    | * ? * ? * ? * ? * ? * ? * |
+    ```
+
+2. Now, sample a list of integers equal to the number of urns minus 1. Each of these numbers will represent a position in the string, so they need to be in the range $[0, \text{bins} + 2]$ inclusive. It is ok if these numbers repeat, that is how we get urns with zero balls.
+
+    ```txt copy=false
+    3, 1, 3, 7
+    ```
+
+    Not a very even distribution, but that's probability for you!
+
+3. Finally, we place each of the bars, and count our bin assignments.
+
+    ```txt copy=false
+    0   1   2   3   4   5   6   7
+    | * | *   *| |*   *   *   *||
+    ```
+
+    The final bin assignments are therefore [1, 2, 0, 4, 0].
+
+And that's it. That is how the Stars-and-Bars algorithm works. It also has the nice property of sampling uniformly from all the possible assignments.
 
 ## Greedy Stars-and-Bars
-So how do we use the stars-and-bars approach for our 2d problems?
+So how do we use the stars-and-bars approach for our 2d problems? If we can get stars-and-bars to work as well for 2d as it does for 1d, then I'd be done in no time.
 
-While I did try in vain to figure out a way that I could replicate the simplicity of stars-and-bars, I wasn't able to. The ideal would be if we could just sample $N\times M$ total numbers, and then sort them in a way that would preserve all of our margins.
+While I did try in vain to figure out a way that I could replicate the simplicity of stars-and-bars, I wasn't able to. The ideal would be just using the same approach: If we could sample $(N-1)\times (M-1)$ total numbers, and then sort them in a way that would preserve all of our margins, then we'd be on our way.
 
-While not the only problem, one of the largest problems that an approach like this faces is that not every selection of $N\times M$ integers which are less than the total mass forms a valid solution to the possible world problem.
+While not the only problem, one of the largest problems that an approach like that would face is that not every selection of $(N-1)\times (M-1)$ integers which are less than the total mass can even form a valid solution to the possible world problem.
 
 <details>
 <summary>*Example of invalid set of integers*</summary>
@@ -296,7 +503,7 @@ Since the total mass is $3$, we start by sampling $4$ integers which are less th
 No matter how we sort or arrange these values, this selection of bars implies that one of our cell entries will have a value of $3$. Unfortunately for us, no matter which cell we choose, that will violate not one, but *both* the row and column constraint.
 </details>
 
-Instead of trying to construct some impossible miracle solution, let's try something a bit simpler, and more reasonable.
+Instead of trying to construct some impossible miracle solution, let's try something a bit simpler and more reasonable.
 
 ![The classic conspiracy theory meme of Charlie from Always Sunny in Philidelphia in front of a board with papers and red string](./conspiracy_meme.jpg)
 
